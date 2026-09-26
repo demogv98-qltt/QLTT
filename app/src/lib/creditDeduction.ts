@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -70,6 +71,16 @@ export async function applyAttendanceCredit(
     const enrollmentRef = candidate.ref
     try {
       await runTransaction(db, async (tx) => {
+        // Reads must precede writes in a Firestore transaction — which is what makes this
+        // check a real idempotency lock rather than just an informational flag. If this
+        // function is ever called twice for the same attendance doc (e.g. a double-clicked
+        // "Có mặt" button firing two overlapping calls), both transactions read this doc
+        // before either commits; Firestore detects the conflicting commit and silently
+        // re-runs the loser's callback, which then sees creditApplied already true here and
+        // aborts instead of deducting a second session.
+        const attendanceSnap = await tx.get(attendanceRef)
+        if (attendanceSnap.data()?.creditApplied) throw new Error('ALREADY_APPLIED')
+
         const enrollmentSnap = await tx.get(enrollmentRef)
         const e = enrollmentSnap.data()
         if (!e) throw new Error('ENROLLMENT_GONE')
@@ -105,9 +116,20 @@ export async function applyAttendanceCredit(
       return // success
     } catch (err) {
       const message = err instanceof Error ? err.message : ''
+      // Another concurrent call already applied credit for this attendance doc — done,
+      // nothing left to do (and nothing to flag; the winning call already set the fields).
+      if (message === 'ALREADY_APPLIED') return
       if (message === 'ENROLLMENT_EXHAUSTED' || message === 'ENROLLMENT_GONE') {
         continue // try the next-oldest candidate
       }
+      // A losing transaction in a genuine race can also fail commit itself (Firestore
+      // detects two transactions both touched the same doc and rejects the second one's
+      // write outright, rather than transparently retrying it) instead of surfacing as our
+      // own ALREADY_APPLIED throw above. Rather than assume every unrecognized error is a
+      // real failure, check whether the credit was in fact already applied by the winner —
+      // if so this is that same benign race, not a bug, so don't surface an error for it.
+      const recheck = await getDoc(attendanceRef)
+      if (recheck.data()?.creditApplied) return
       throw err
     }
   }

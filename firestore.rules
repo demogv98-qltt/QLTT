@@ -157,16 +157,22 @@ service cloud.firestore {
         isParentOfStudent(resource.data.studentId);
       allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
         request.resource.data.orgId == myOrgId();
-      // Selling/editing a package (any field) stays owner/manager only. Any staff of the
-      // center (teacher/TA included) may additionally update *only* the three credit-tracking
-      // fields — this is what lets attendance run the FIFO deduction straight from the client
-      // (see app/src/lib/creditDeduction.ts) without a Cloud Function in between.
+      // Selling/editing a package (any field, any value) stays owner/manager only. Any staff
+      // of the center (teacher/TA included) may additionally update the three
+      // credit-tracking fields — this is what lets attendance run the FIFO deduction
+      // straight from the client (see app/src/lib/creditDeduction.ts) without a Cloud
+      // Function in between — but ONLY as exactly "consume one session": limiting it to
+      // these three field names isn't enough on its own (a malicious client could still set
+      // remainingSessions to any value it likes), so the rule also pins the exact arithmetic.
       allow update: if resource.data.orgId == myOrgId() &&
         (
           (isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId)) ||
           (isStaffOfCenter(resource.data.centerId) &&
             request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['usedSessions', 'remainingSessions', 'active']))
+              .hasOnly(['usedSessions', 'remainingSessions', 'active']) &&
+            request.resource.data.usedSessions == resource.data.usedSessions + 1 &&
+            request.resource.data.remainingSessions == resource.data.totalSessions - request.resource.data.usedSessions &&
+            request.resource.data.active == (request.resource.data.remainingSessions > 0))
         );
       allow delete: if isOwner() && resource.data.orgId == myOrgId();
     }
