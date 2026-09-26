@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore'
 import { useMemo, useState, type FormEvent } from 'react'
 import { db } from '../lib/firebase'
+import { studentAvatar } from '../lib/avatar'
 import { useCollection } from '../lib/useCollection'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
@@ -213,7 +214,10 @@ export function EnrollmentsPage() {
               const low = en.remainingSessions <= LOW_BALANCE_THRESHOLD && en.remainingSessions > 0
               return (
                 <tr key={en.id} className="border-t border-gray-100">
-                  <td className="px-3 py-2 font-medium text-gray-900">{studentName[en.studentId] ?? '—'}</td>
+                  <td className="px-3 py-2 font-medium text-gray-900">
+                    <span className="mr-2">{studentAvatar(en.studentId)}</span>
+                    {studentName[en.studentId] ?? '—'}
+                  </td>
                   <td className="px-3 py-2 text-gray-600">{className[en.classId] ?? '—'}</td>
                   <td className="px-3 py-2 text-gray-600">
                     {en.packageType === 'session_pack' ? 'Trả theo buổi' : 'Gói tháng'}

@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore'
 import { useMemo, useState, type FormEvent } from 'react'
 import { db } from '../lib/firebase'
+import { studentAvatar } from '../lib/avatar'
 import { useCollection } from '../lib/useCollection'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
@@ -184,7 +185,8 @@ export function PaymentsPage() {
               .filter((r) => r.debt > 0)
               .map((r) => (
                 <li key={r.studentId}>
-                  {r.name}: còn nợ {formatVND(r.debt)} (đã đóng {formatVND(r.paid)}/{formatVND(r.owed)})
+                  {studentAvatar(r.studentId)} {r.name}: còn nợ {formatVND(r.debt)} (đã đóng{' '}
+                  {formatVND(r.paid)}/{formatVND(r.owed)})
                 </li>
               ))}
           </ul>
@@ -207,7 +209,10 @@ export function PaymentsPage() {
           <tbody>
             {payments.map((p) => (
               <tr key={p.id} className="border-t border-gray-100">
-                <td className="px-3 py-2 font-medium text-gray-900">{studentName[p.studentId] ?? '—'}</td>
+                <td className="px-3 py-2 font-medium text-gray-900">
+                  <span className="mr-2">{studentAvatar(p.studentId)}</span>
+                  {studentName[p.studentId] ?? '—'}
+                </td>
                 <td className="px-3 py-2 text-gray-700">{formatVND(p.amount)}</td>
                 <td className="px-3 py-2 text-gray-600">{METHOD_LABELS[p.method]}</td>
                 <td className="px-3 py-2 text-gray-600">{p.note || '-'}</td>

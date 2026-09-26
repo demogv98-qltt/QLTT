@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { db } from '../lib/firebase'
+import { studentAvatar } from '../lib/avatar'
 import { applyAttendanceCredit } from '../lib/creditDeduction'
 import { useCollection } from '../lib/useCollection'
 import { todayISODate, weekdayOf, WEEKDAY_LABELS } from '../lib/schedule'
@@ -227,7 +228,10 @@ export function AttendancePage() {
                 key={studentId}
                 className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3"
               >
-                <span className="font-medium text-gray-900">{studentName[studentId] ?? studentId}</span>
+                <span className="font-medium text-gray-900">
+                  <span className="mr-2">{studentAvatar(studentId)}</span>
+                  {studentName[studentId] ?? studentId}
+                </span>
                 {recorded ? (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[recorded.status]}`}>
                     {STATUS_LABELS[recorded.status]}
