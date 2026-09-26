@@ -1,0 +1,16 @@
+{
+  "name": "qltt",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App quan ly Trung tam Vat ly (3 co so) - diem danh, goi buoi hoc, thu chi",
+  "scripts": {
+    "dev": "npm --prefix app run dev",
+    "build": "npm --prefix app run build",
+    "emulators": "firebase emulators:start --project qltt-dev",
+    "test:functions": "npm --prefix functions test"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.29.0"
+  },
+  "license": "ISC"
+}
