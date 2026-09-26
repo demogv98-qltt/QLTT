@@ -2,6 +2,7 @@ import { collection, query, Timestamp, where } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
+import { currentMonthValue, formatVND, monthRange } from '../lib/month'
 import { ROLE_LABELS } from '../lib/roles'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
@@ -24,23 +25,6 @@ const STATUS_LABEL: Record<AttendanceStatus, string> = {
   unexcused_absence: 'Vắng không phép',
 }
 const STATUS_ORDER: AttendanceStatus[] = ['present', 'makeup', 'excused_absence', 'unexcused_absence']
-
-function currentMonthValue() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-function monthRange(monthValue: string) {
-  const [y, m] = monthValue.split('-').map(Number)
-  const start = new Date(y, m - 1, 1)
-  const end = new Date(y, m, 1)
-  const daysInMonth = new Date(y, m, 0).getDate()
-  return { start, end, daysInMonth }
-}
-
-function formatVND(amount: number) {
-  return amount.toLocaleString('vi-VN') + 'đ'
-}
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (

@@ -72,6 +72,11 @@ export function Layout() {
               Thanh toán
             </NavLink>
           )}
+          {manage && (
+            <NavLink to="/reports" className={navItem}>
+              Báo cáo
+            </NavLink>
+          )}
           {isSuperAdmin && (
             <NavLink to="/admin" className={navItem}>
               Quản trị

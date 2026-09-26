@@ -10,6 +10,7 @@ import { EnrollmentsPage } from './pages/EnrollmentsPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { PaymentsPage } from './pages/PaymentsPage'
+import { ReportsPage } from './pages/ReportsPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { StaffPage } from './pages/StaffPage'
 import { StudentsPage } from './pages/StudentsPage'
@@ -41,6 +42,7 @@ function App() {
               <Route path="staff" element={<StaffPage />} />
               <Route path="enrollments" element={<EnrollmentsPage />} />
               <Route path="payments" element={<PaymentsPage />} />
+              <Route path="reports" element={<ReportsPage />} />
             </Route>
           </Route>
         </Route>
