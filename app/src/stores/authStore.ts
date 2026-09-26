@@ -6,7 +6,7 @@ import {
   updateProfile,
   type User,
 } from 'firebase/auth'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { create } from 'zustand'
 import { auth, db } from '../lib/firebase'
 import type { AppUser } from '../types'
@@ -67,6 +67,12 @@ export const useAuthStore = create<AuthState>((set) => {
       try {
         const cred = await createUserWithEmailAndPassword(auth, email, password)
         await updateProfile(cred.user, { displayName })
+        // The seedUserProfile Cloud Function creates users/{uid} on an auth trigger that can
+        // race this (it may run before or after updateProfile above resolves). Writing
+        // displayName here too — merged, not overwritten — means whichever one lands last,
+        // the profile still ends up with the name the person typed instead of an email
+        // fallback. See functions/src/createUserProfile.ts for the other half of this fix.
+        await setDoc(doc(db, 'users', cred.user.uid), { displayName }, { merge: true })
       } catch (err) {
         set({ error: err instanceof Error ? err.message : 'Đăng ký thất bại' })
         throw err

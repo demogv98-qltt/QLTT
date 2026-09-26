@@ -63,10 +63,18 @@ export function AttendancePage() {
 
   const { data: enrollments } = useCollection<Enrollment>(
     () =>
-      classId
-        ? query(collection(db, 'enrollments'), where('classId', '==', classId), where('active', '==', true))
+      classId && selectedCenterId
+        ? query(
+            collection(db, 'enrollments'),
+            // centerId must be in the filter — Firestore rules check resource.data.centerId,
+            // and a list query can only be proven safe when every field the rule reads is
+            // also constrained by the query itself (see firestore.rules `isStaffOfCenter`).
+            where('centerId', '==', selectedCenterId),
+            where('classId', '==', classId),
+            where('active', '==', true),
+          )
         : null,
-    [classId],
+    [classId, selectedCenterId],
   )
   const { data: students } = useCollection<Student>(
     () => (selectedCenterId ? query(collection(db, 'students'), where('centerId', '==', selectedCenterId)) : null),
@@ -79,8 +87,15 @@ export function AttendancePage() {
   )
 
   const { data: attendanceRecords } = useCollection<Attendance>(
-    () => (sessionId ? query(collection(db, 'attendance'), where('sessionId', '==', sessionId)) : null),
-    [sessionId],
+    () =>
+      sessionId && selectedCenterId
+        ? query(
+            collection(db, 'attendance'),
+            where('centerId', '==', selectedCenterId),
+            where('sessionId', '==', sessionId),
+          )
+        : null,
+    [sessionId, selectedCenterId],
   )
   const attendanceByStudent = useMemo(
     () => Object.fromEntries(attendanceRecords.map((a) => [a.studentId, a])),

@@ -17,6 +17,14 @@
       ]
     },
     {
+      "collectionGroup": "attendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "centerId", "order": "ASCENDING" },
+        { "fieldPath": "sessionId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "enrollments",
       "queryScope": "COLLECTION",
       "fields": [
@@ -28,6 +36,7 @@
       "collectionGroup": "enrollments",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "classId", "order": "ASCENDING" },
         { "fieldPath": "active", "order": "ASCENDING" }
       ]

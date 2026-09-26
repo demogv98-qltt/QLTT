@@ -72,7 +72,11 @@ service cloud.firestore {
 
     // --- Class sessions ---
     match /classSessions/{sessionId} {
-      allow read: if isStaffOfCenter(resource.data.centerId);
+      // `resource == null` handles the get-or-create read in Attendance: checking whether
+      // today's session doc exists yet is a `get` on a possibly-nonexistent document, and
+      // without this guard `resource.data.centerId` throws (resource is null) instead of
+      // just correctly reporting "not found".
+      allow read: if resource == null || isStaffOfCenter(resource.data.centerId);
       // Any staff of the center (not just owner/manager) can create today's session doc —
       // teachers/TAs open Attendance and get-or-create it on the fly.
       allow create: if isStaffOfCenter(request.resource.data.centerId);
