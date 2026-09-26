@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "npm --prefix app run dev",
     "build": "npm --prefix app run build",
-    "emulators": "firebase emulators:start --project qltt-dev",
-    "test:functions": "firebase emulators:exec --project qltt-dev --only firestore \"npm --prefix functions test\""
+    "emulators": "firebase emulators:start --project qltt-dev"
   },
   "devDependencies": {
     "firebase-tools": "^13.29.0"

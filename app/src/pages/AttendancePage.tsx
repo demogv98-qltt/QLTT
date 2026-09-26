@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { db } from '../lib/firebase'
+import { applyAttendanceCredit } from '../lib/creditDeduction'
 import { useCollection } from '../lib/useCollection'
 import { todayISODate, weekdayOf, WEEKDAY_LABELS } from '../lib/schedule'
 import { useAuthStore } from '../stores/authStore'
@@ -147,6 +148,9 @@ export function AttendancePage() {
       recordedBy: profile.id,
       recordedAt: serverTimestamp(),
     })
+    // No Cloud Function trigger runs this project (Spark plan, no billing) — apply the FIFO
+    // credit deduction right here instead. See app/src/lib/creditDeduction.ts.
+    await applyAttendanceCredit(db, ref, ref.id, { studentId, classId, centerId: selectedCenterId, status })
   }
 
   if (!selectedCenterId) {

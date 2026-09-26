@@ -53,6 +53,7 @@
       "collectionGroup": "enrollments",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "studentId", "order": "ASCENDING" },
         { "fieldPath": "classId", "order": "ASCENDING" },
         { "fieldPath": "active", "order": "ASCENDING" },

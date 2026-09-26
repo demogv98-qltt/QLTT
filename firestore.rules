@@ -43,10 +43,35 @@ service cloud.firestore {
       return isSignedIn() && myRole() == 'parent' && studentId in myStudentIds();
     }
 
+    // --- Bootstrap marker: exactly one document, created atomically alongside the very
+    // first user's self-signup as 'owner' (see authStore.ts). Its own create rule only
+    // allows that one-time creation; nothing may ever update or delete it, so no client
+    // can mint a second owner later.
+    match /meta/bootstrap {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        !exists(/databases/$(database)/documents/meta/bootstrap) &&
+        request.resource.data.ownerClaimed == true;
+      allow update, delete: if false;
+    }
+
     // --- Users ---
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isOwnerOrManager());
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      // Self-signup always writes role 'parent' for itself — except the very first account
+      // ever, which is allowed 'owner' only when it also creates meta/bootstrap in the same
+      // transaction (getAfter reads the post-write state, so this is impossible to fake:
+      // claiming 'owner' without that companion write fails, and meta/bootstrap's own create
+      // rule above means only one caller can ever win that race).
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+        (
+          request.resource.data.role == 'parent' ||
+          (
+            request.resource.data.role == 'owner' &&
+            !exists(/databases/$(database)/documents/meta/bootstrap) &&
+            getAfter(/databases/$(database)/documents/meta/bootstrap).data.ownerClaimed == true
+          )
+        );
       // Only owner/manager can change role/centerIds/studentIds (access control fields).
       allow update: if isOwnerOrManager() ||
         (isSignedIn() && request.auth.uid == userId &&
@@ -94,7 +119,15 @@ service cloud.firestore {
     // --- Enrollments (session packages) ---
     match /enrollments/{enrollmentId} {
       allow read: if isStaffOfCenter(resource.data.centerId) || isParentOfStudent(resource.data.studentId);
-      allow create, update: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId);
+      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId);
+      // Selling/editing a package (any field) stays owner/manager only. Any staff of the
+      // center (teacher/TA included) may additionally update *only* the three credit-tracking
+      // fields — this is what lets attendance run the FIFO deduction straight from the client
+      // (see app/src/lib/creditDeduction.ts) without a Cloud Function in between.
+      allow update: if (isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId)) ||
+        (isStaffOfCenter(resource.data.centerId) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['usedSessions', 'remainingSessions', 'active']));
       allow delete: if isOwner();
     }
 
