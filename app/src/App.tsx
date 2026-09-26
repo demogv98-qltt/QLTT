@@ -7,6 +7,7 @@ import { CentersPage } from './pages/CentersPage'
 import { ClassesPage } from './pages/ClassesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EnrollmentsPage } from './pages/EnrollmentsPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { SignUpPage } from './pages/SignUpPage'
@@ -19,6 +20,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         <Route element={<RequireAuth />}>
           {/* Outside Layout on purpose: Layout blocks its content when the signed-in

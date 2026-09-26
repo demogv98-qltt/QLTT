@@ -58,6 +58,9 @@ export function LoginPage() {
         >
           {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
+        <Link to="/forgot-password" className="mb-2 block text-center text-sm text-indigo-600 hover:underline">
+          Quên mật khẩu?
+        </Link>
         <Link to="/signup" className="block text-center text-sm text-indigo-600 hover:underline">
           Chưa có tài khoản? Đăng ký
         </Link>

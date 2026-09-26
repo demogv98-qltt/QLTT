@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -24,6 +25,7 @@ interface AuthState {
   error: string | null
   login: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, displayName: string, org: SignUpOrg) => Promise<void>
+  resetPassword: (email: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -127,6 +129,15 @@ export const useAuthStore = create<AuthState>((set) => {
         }
       } catch (err) {
         set({ error: err instanceof Error ? err.message : 'Đăng ký thất bại' })
+        throw err
+      }
+    },
+    resetPassword: async (email) => {
+      set({ error: null })
+      try {
+        await sendPasswordResetEmail(auth, email)
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : 'Gửi email thất bại' })
         throw err
       }
     },
