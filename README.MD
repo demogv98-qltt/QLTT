@@ -1,1 +1,109 @@
-CGCJCVM
+# QLTT — Quản lý Trung tâm Vật lý (3 cơ sở)
+
+App quản lý trung tâm dạy thêm Vật lý nhiều cơ sở: điểm danh theo buổi thực tế,
+học phí theo gói buổi học (tự động trừ khi điểm danh), và ghi nhận thanh toán
+thủ công. Xem quy hoạch đầy đủ ở tài liệu quy hoạch gốc (đã trao đổi lúc khởi
+tạo dự án).
+
+## Kiến trúc thư mục
+
+```
+app/         Frontend: React (Vite, TS) + Tailwind + Zustand + react-router
+functions/   Backend: Cloud Functions (Firestore triggers)
+firestore.rules       Quy tắc bảo mật Firestore (phân quyền theo vai trò + cơ sở)
+firestore.indexes.json Composite index cho các query dùng trong app
+firebase.json          Cấu hình project Firebase + emulator suite
+```
+
+## Yêu cầu
+
+- Node.js 20+ (khuyến nghị dùng đúng Node 20 cho `functions/`)
+- Firebase CLI (`firebase-tools`, đã có trong `devDependencies` gốc — chạy qua `npx firebase` hoặc `npm run emulators`)
+
+## Chạy local với Firebase Emulator (không cần project Firebase thật)
+
+1. Cài dependencies:
+   ```
+   npm install                    # root (firebase-tools)
+   npm --prefix app install
+   npm --prefix functions install
+   ```
+2. Build Cloud Functions (emulator functions cần bản build sẵn ở `functions/lib`):
+   ```
+   npm --prefix functions run build
+   ```
+3. Khởi động emulator suite (Auth + Firestore + Functions, UI tại http://127.0.0.1:4000):
+   ```
+   npm run emulators
+   ```
+4. Ở terminal khác, chạy frontend (mặc định `app/.env` đã bật `VITE_USE_FIREBASE_EMULATOR=true` để tự kết nối tới emulator, không cần config Firebase project thật):
+   ```
+   npm --prefix app run dev
+   ```
+
+### Tài khoản đầu tiên (bootstrap owner)
+
+Tài khoản **đăng ký đầu tiên** trong hệ thống tự động được gán vai trò **Chủ
+trung tâm (owner)** (xem `functions/src/createUserProfile.ts`). Các tài khoản
+đăng ký sau đó mặc định là "Học sinh/Phụ huynh" — owner/manager vào trang
+**Nhân sự** để nâng quyền thành Quản lý/Giáo viên/Trợ giảng và gán cơ sở phụ
+trách.
+
+Luồng khởi tạo dữ liệu cho một trung tâm mới:
+1. Đăng ký tài khoản đầu tiên → tự động là owner.
+2. Vào **Cơ sở** → tạo cơ sở đầu tiên.
+3. Các tài khoản GV/TA khác tự đăng ký, sau đó owner/manager vào **Nhân sự**
+   gán vai trò + cơ sở cho họ.
+4. Vào **Học sinh**, **Lớp/Ca học** để tạo dữ liệu, sau đó **Gói buổi học** để
+   bán gói cho học sinh.
+5. GV/TA vào **Điểm danh** để điểm danh — hệ thống tự trừ buổi trong gói.
+
+## Chạy test
+
+Cloud Function trừ buổi tự động (`functions/src/creditDeduction.ts`) có test
+đơn vị chạy trên Firestore emulator:
+
+```
+npm run test:functions
+```
+
+Lệnh này tự khởi động Firestore emulator, chạy `vitest` trong `functions/`,
+rồi tắt emulator.
+
+## Cấu hình cho Firebase project thật (deploy)
+
+1. Tạo project trên Firebase Console, bật Authentication (Email/Password) và
+   Firestore.
+2. Copy `app/.env.example` → `app/.env`, điền các biến `VITE_FIREBASE_*` lấy
+   từ cấu hình web app trên Firebase Console, và đặt
+   `VITE_USE_FIREBASE_EMULATOR=false`.
+3. Đăng nhập Firebase CLI (`npx firebase login`) rồi deploy:
+   ```
+   npx firebase deploy --only firestore:rules,firestore:indexes,functions,hosting --project <project-id>
+   ```
+
+## Trạng thái hiện tại (MVP — Giai đoạn 1 theo quy hoạch)
+
+Đã có:
+- Quản lý cơ sở / học sinh / lớp (ca học lặp lại hàng tuần) / nhân sự
+- Điểm danh theo buổi thực tế + tự động trừ 1 buổi trong gói (FIFO theo ngày
+  mua, ưu tiên gói còn hạn dùng), cảnh báo "sắp hết buổi" ở trang Gói buổi học
+  và Dashboard
+- Bán gói buổi học (session-pack) và gói tháng, ghi nhận thanh toán thủ công +
+  tổng hợp công nợ theo học sinh
+- Phân quyền theo vai trò (Owner/Manager/TA/Teacher/Parent) qua Firestore
+  Security Rules, scoping theo cơ sở
+
+Chưa làm (Giai đoạn 2-4 theo quy hoạch, chưa trong phạm vi hiện tại):
+- Bảng lương tự động theo điểm danh, báo cáo tháng tổng hợp 3 cơ sở, xuất
+  PDF/Excel tự động
+- Cổng xem riêng cho Học sinh/Phụ huynh (hiện tại role `parent` đã có trong
+  data model + rules nhưng chưa có giao diện)
+- App/PWA điểm danh riêng cho GV/trợ giảng
+
+### Giới hạn đã biết
+
+- Xóa một bản ghi điểm danh (owner/manager) **không** hoàn lại buổi đã trừ
+  trong gói — cần điều chỉnh thủ công ở trang Gói buổi học nếu điểm danh nhầm.
+- Chưa có cơ chế mời tài khoản qua email; nhân sự mới cần tự đăng ký trước,
+  sau đó owner/manager mới gán được vai trò.
