@@ -7,11 +7,18 @@ export type Role = 'owner' | 'manager' | 'ta' | 'teacher' | 'parent'
  * see Center). Every other collection is scoped to an orgId so Firestore rules can prove two
  * organizations' data never mixes — see firestore.rules.
  */
+export type OrgStatus = 'trial' | 'active' | 'suspended'
+
 export interface Organization {
   id: string
   name: string
   ownerId: string
   createdAt: Timestamp
+  /** Billing status, set by the Super Admin (see app/src/lib/superAdmin.ts) from
+   * app/src/pages/AdminPage.tsx. New orgs start 'trial' (unrestricted, but the app shows a
+   * banner nudging them to contact the seller); 'suspended' blocks the whole app until
+   * reactivated. */
+  status: OrgStatus
 }
 
 export interface AppUser {

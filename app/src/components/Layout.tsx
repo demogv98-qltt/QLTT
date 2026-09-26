@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
+import { useOrgStore } from '../stores/orgStore'
+import { SUPER_ADMIN_EMAIL } from '../lib/superAdmin'
 import { ROLE_LABELS, canManage, isStaffRole } from '../lib/roles'
 
 const navItem =
@@ -10,16 +12,24 @@ const navItem =
 export function Layout() {
   const { profile, logout } = useAuthStore()
   const { centers, selectedCenterId, subscribe, select } = useCenterStore()
+  const { organization, subscribe: subscribeOrg } = useOrgStore()
 
   useEffect(() => {
     if (!profile) return
     return subscribe(profile.centerIds ?? [])
   }, [profile, subscribe])
 
+  useEffect(() => {
+    if (!profile) return
+    return subscribeOrg(profile.orgId)
+  }, [profile, subscribeOrg])
+
   if (!profile) return null
 
   const manage = canManage(profile.role)
   const staff = isStaffRole(profile.role)
+  const isSuperAdmin = profile.email === SUPER_ADMIN_EMAIL
+  const suspended = organization?.status === 'suspended'
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -62,6 +72,11 @@ export function Layout() {
               Thanh toán
             </NavLink>
           )}
+          {isSuperAdmin && (
+            <NavLink to="/admin" className={navItem}>
+              Quản trị
+            </NavLink>
+          )}
         </nav>
       </aside>
 
@@ -100,8 +115,25 @@ export function Layout() {
           </div>
         </header>
 
+        {organization?.status === 'trial' && (
+          <div className="bg-amber-50 px-6 py-2 text-sm text-amber-800">
+            Trung tâm đang ở chế độ <strong>dùng thử</strong> — liên hệ người bán phần mềm để
+            kích hoạt đầy đủ.
+          </div>
+        )}
+
         <main className="flex-1 p-6">
-          <Outlet />
+          {suspended ? (
+            <div className="mx-auto mt-12 max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+              <p className="mb-1 text-lg font-semibold text-red-800">Tài khoản đang bị tạm khóa</p>
+              <p className="text-sm text-red-700">
+                Trung tâm của bạn đã bị tạm khóa. Vui lòng liên hệ người bán phần mềm để được hỗ
+                trợ kích hoạt lại.
+              </p>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

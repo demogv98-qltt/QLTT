@@ -47,23 +47,38 @@ service cloud.firestore {
       return isSignedIn() && myRole() == 'parent' && studentId in myStudentIds();
     }
 
+    // The one account (by email, not Firestore role — it doesn't belong to any single org)
+    // that runs Trang quản trị: sees every organization and flips billing status. Mirrored in
+    // app/src/lib/superAdmin.ts — keep both in sync if this ever changes.
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.email == 'haunn.vietanhschool@gmail.com';
+    }
+
     // --- Organizations (tenants) ---
     // One document per paying customer. Every other collection carries an orgId and every
     // rule below checks it against myOrgId() — that's what actually keeps two organizations'
     // data apart; centerIds/roles only decide what a user can do *within* their own org.
     match /organizations/{orgId} {
-      allow read: if isSignedIn() && myOrgId() == orgId;
+      allow read: if isSuperAdmin() || (isSignedIn() && myOrgId() == orgId);
       // Created once, atomically, by the account that becomes its owner (see the
       // `users/{userId}` create rule below, which requires this same-transaction pairing).
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isOwnerOrManager() && myOrgId() == orgId;
+      // Always starts 'trial' — nobody can self-grant 'active' at signup.
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.status == 'trial';
+      // The org's own owner/manager can rename it etc., but never touch status or ownerId —
+      // only the Super Admin (Trang quản trị) grants/revokes billing status.
+      allow update: if isSuperAdmin() ||
+        (isOwnerOrManager() && myOrgId() == orgId &&
+          request.resource.data.status == resource.data.status &&
+          request.resource.data.ownerId == resource.data.ownerId);
       allow delete: if false;
     }
 
     // --- Users ---
     match /users/{userId} {
       allow read: if isSignedIn() &&
-        (request.auth.uid == userId || (isOwnerOrManager() && resource.data.orgId == myOrgId()));
+        (request.auth.uid == userId || isSuperAdmin() ||
+          (isOwnerOrManager() && resource.data.orgId == myOrgId()));
       // Signing up either creates a brand-new organization (this account becomes its
       // 'owner' — the very first account for that org) or joins an existing one by its
       // orgId (always as 'parent'; staff roles are granted afterwards from the Nhân sự

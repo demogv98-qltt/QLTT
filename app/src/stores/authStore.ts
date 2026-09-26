@@ -87,7 +87,12 @@ export const useAuthStore = create<AuthState>((set) => {
           const orgId = doc(collection(db, 'organizations')).id
           const orgRef = doc(db, 'organizations', orgId)
           await runTransaction(db, async (tx) => {
-            tx.set(orgRef, { name: org.orgName, ownerId: cred.user.uid, createdAt: serverTimestamp() })
+            tx.set(orgRef, {
+              name: org.orgName,
+              ownerId: cred.user.uid,
+              status: 'trial',
+              createdAt: serverTimestamp(),
+            })
             tx.set(userRef, {
               id: cred.user.uid,
               orgId,

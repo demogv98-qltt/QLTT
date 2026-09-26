@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { RequireAuth, RequireRole } from './components/RequireAuth'
+import { AdminPage } from './pages/AdminPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { CentersPage } from './pages/CentersPage'
 import { ClassesPage } from './pages/ClassesPage'
@@ -20,6 +21,10 @@ function App() {
         <Route path="/signup" element={<SignUpPage />} />
 
         <Route element={<RequireAuth />}>
+          {/* Outside Layout on purpose: Layout blocks its content when the signed-in
+              account's own org is 'suspended', and the Super Admin must never be able to
+              lock themselves out of the one page that can undo that. */}
+          <Route path="admin" element={<AdminPage />} />
           <Route element={<Layout />}>
             <Route index element={<DashboardPage />} />
             <Route path="classes" element={<ClassesPage />} />
