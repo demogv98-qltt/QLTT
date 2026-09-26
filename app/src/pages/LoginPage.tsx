@@ -28,7 +28,7 @@ export function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm"
       >
-        <h1 className="mb-1 text-xl font-bold text-gray-900">QLTT Vật lý</h1>
+        <h1 className="mb-1 text-xl font-bold text-gray-900">QLTT TLM</h1>
         <p className="mb-6 text-sm text-gray-500">Đăng nhập để tiếp tục</p>
 
         <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>

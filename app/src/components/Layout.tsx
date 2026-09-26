@@ -24,7 +24,7 @@ export function Layout() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="w-60 shrink-0 border-r border-gray-200 bg-white p-4">
-        <h1 className="mb-6 px-2 text-lg font-bold text-gray-900">QLTT Vật lý</h1>
+        <h1 className="mb-6 px-2 text-lg font-bold text-gray-900">QLTT TLM</h1>
         <nav className="space-y-1">
           <NavLink to="/" end className={navItem}>
             Tổng quan
