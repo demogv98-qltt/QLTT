@@ -17,6 +17,7 @@ export function CentersPage() {
     setSubmitting(true)
     try {
       const centerRef = await addDoc(collection(db, 'centers'), {
+        orgId: profile.orgId,
         name: name.trim(),
         address: address.trim(),
         createdAt: serverTimestamp(),

@@ -1,6 +1,22 @@
 {
   "indexes": [
     {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "email", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "role", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "classSessions",
       "queryScope": "COLLECTION",
       "fields": [
@@ -20,6 +36,7 @@
       "collectionGroup": "attendance",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "sessionId", "order": "ASCENDING" }
       ]
@@ -36,6 +53,7 @@
       "collectionGroup": "enrollments",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "classId", "order": "ASCENDING" },
         { "fieldPath": "active", "order": "ASCENDING" }
@@ -45,6 +63,7 @@
       "collectionGroup": "enrollments",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "purchasedAt", "order": "DESCENDING" }
       ]
@@ -53,6 +72,7 @@
       "collectionGroup": "enrollments",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "studentId", "order": "ASCENDING" },
         { "fieldPath": "classId", "order": "ASCENDING" },
@@ -72,6 +92,7 @@
       "collectionGroup": "payments",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "recordedAt", "order": "DESCENDING" }
       ]
@@ -80,6 +101,7 @@
       "collectionGroup": "students",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "fullName", "order": "ASCENDING" }
       ]
@@ -88,6 +110,7 @@
       "collectionGroup": "classes",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "name", "order": "ASCENDING" }
       ]

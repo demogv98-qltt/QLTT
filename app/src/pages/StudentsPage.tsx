@@ -2,21 +2,27 @@ import { addDoc, collection, orderBy, query, serverTimestamp, where } from 'fire
 import { useState, type FormEvent } from 'react'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
+import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
 import type { Student } from '../types'
 
 export function StudentsPage() {
+  const { profile } = useAuthStore()
   const { selectedCenterId } = useCenterStore()
   const { data: students, loading } = useCollection<Student>(
     () =>
-      selectedCenterId
+      selectedCenterId && profile
         ? query(
             collection(db, 'students'),
+            // orgId must be in the filter — firestore.rules checks resource.data.orgId, and a
+            // list query is only provably safe when every field the rule reads is also
+            // constrained by the query itself.
+            where('orgId', '==', profile.orgId),
             where('centerId', '==', selectedCenterId),
             orderBy('fullName'),
           )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
 
   const [fullName, setFullName] = useState('')
@@ -26,10 +32,11 @@ export function StudentsPage() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
-    if (!fullName.trim() || !selectedCenterId) return
+    if (!fullName.trim() || !selectedCenterId || !profile) return
     setSubmitting(true)
     try {
       await addDoc(collection(db, 'students'), {
+        orgId: profile.orgId,
         centerId: selectedCenterId,
         fullName: fullName.trim(),
         phone: phone.trim(),

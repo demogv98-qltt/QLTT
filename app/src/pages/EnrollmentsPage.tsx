@@ -9,6 +9,7 @@ import {
 import { useMemo, useState, type FormEvent } from 'react'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
+import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
 import type { ClassGroup, Enrollment, PackageType, Student } from '../types'
 
@@ -21,28 +22,44 @@ function addMonths(date: Date, months: number): Date {
 }
 
 export function EnrollmentsPage() {
+  const { profile } = useAuthStore()
   const { selectedCenterId } = useCenterStore()
 
   const { data: students } = useCollection<Student>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'students'), where('centerId', '==', selectedCenterId), orderBy('fullName'))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'students'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('fullName'),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
   const { data: classes } = useCollection<ClassGroup>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'classes'), where('centerId', '==', selectedCenterId), orderBy('name'))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'classes'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('name'),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
   const { data: enrollments, loading } = useCollection<Enrollment>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'enrollments'), where('centerId', '==', selectedCenterId), orderBy('purchasedAt', 'desc'))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'enrollments'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('purchasedAt', 'desc'),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
 
   const [studentId, setStudentId] = useState('')
@@ -60,7 +77,7 @@ export function EnrollmentsPage() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
-    if (!studentId || !classId || !selectedCenterId || totalSessions <= 0) return
+    if (!studentId || !classId || !selectedCenterId || !profile || totalSessions <= 0) return
     setSubmitting(true)
     try {
       const now = new Date()
@@ -68,6 +85,7 @@ export function EnrollmentsPage() {
         packageType === 'session_pack' ? addMonths(now, 3) : addMonths(now, 1)
 
       await addDoc(collection(db, 'enrollments'), {
+        orgId: profile.orgId,
         studentId,
         classId,
         centerId: selectedCenterId,

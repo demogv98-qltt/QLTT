@@ -1,16 +1,19 @@
-import { collection, doc, orderBy, query, updateDoc } from 'firebase/firestore'
+import { collection, doc, orderBy, query, updateDoc, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
 import { ROLE_LABELS } from '../lib/roles'
+import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
 import type { AppUser, Role } from '../types'
 
 const ASSIGNABLE_ROLES: Role[] = ['manager', 'teacher', 'ta', 'parent']
 
 export function StaffPage() {
+  const { profile } = useAuthStore()
   const { data: users, loading } = useCollection<AppUser>(
-    () => query(collection(db, 'users'), orderBy('email')),
-    [],
+    () =>
+      profile ? query(collection(db, 'users'), where('orgId', '==', profile.orgId), orderBy('email')) : null,
+    [profile],
   )
   const { centers } = useCenterStore()
 
@@ -33,6 +36,17 @@ export function StaffPage() {
         Gán vai trò và cơ sở phụ trách cho từng tài khoản. Tài khoản mới đăng ký mặc định là
         "Học sinh/Phụ huynh".
       </p>
+
+      {profile && (
+        <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm">
+          <p className="font-medium text-indigo-900">Mã trung tâm của bạn (chia sẻ để mời nhân sự/phụ huynh):</p>
+          <code className="mt-1 block rounded bg-white px-2 py-1 text-indigo-700">{profile.orgId}</code>
+          <p className="mt-1 text-xs text-indigo-700">
+            Người nhận mã này chọn "Tham gia trung tâm có sẵn" ở trang Đăng ký và nhập mã trên —
+            tài khoản của họ sẽ mặc định là "Học sinh/Phụ huynh", bạn gán vai trò/cơ sở bên dưới sau.
+          </p>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-gray-500">Đang tải...</p>

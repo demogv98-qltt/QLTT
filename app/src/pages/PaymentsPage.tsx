@@ -29,21 +29,38 @@ export function PaymentsPage() {
 
   const { data: students } = useCollection<Student>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'students'), where('centerId', '==', selectedCenterId), orderBy('fullName'))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'students'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('fullName'),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
   const { data: enrollments } = useCollection<Enrollment>(
-    () => (selectedCenterId ? query(collection(db, 'enrollments'), where('centerId', '==', selectedCenterId)) : null),
-    [selectedCenterId],
+    () =>
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'enrollments'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+          )
+        : null,
+    [selectedCenterId, profile],
   )
   const { data: payments, loading } = useCollection<Payment>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'payments'), where('centerId', '==', selectedCenterId), orderBy('recordedAt', 'desc'))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'payments'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('recordedAt', 'desc'),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
 
   const studentName = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s.fullName])), [students])
@@ -76,6 +93,7 @@ export function PaymentsPage() {
     setSubmitting(true)
     try {
       await addDoc(collection(db, 'payments'), {
+        orgId: profile.orgId,
         studentId,
         centerId: selectedCenterId,
         amount,

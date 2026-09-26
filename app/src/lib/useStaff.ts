@@ -4,11 +4,15 @@ import { db } from '../lib/firebase'
 import { useCollection } from './useCollection'
 import type { AppUser } from '../types'
 
-/** Teachers/TAs assigned to the given center (client-side filtered — small staff counts per center). */
-export function useStaffOfCenter(centerId: string | null) {
+/** Teachers/TAs of the given org assigned to the given center (client-side filtered by
+ * center — small staff counts per center). */
+export function useStaffOfCenter(orgId: string | null | undefined, centerId: string | null) {
   const { data, loading } = useCollection<AppUser>(
-    () => query(collection(db, 'users'), where('role', 'in', ['teacher', 'ta'])),
-    [],
+    () =>
+      orgId
+        ? query(collection(db, 'users'), where('orgId', '==', orgId), where('role', 'in', ['teacher', 'ta']))
+        : null,
+    [orgId],
   )
 
   const staff = useMemo(

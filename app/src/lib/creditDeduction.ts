@@ -16,6 +16,7 @@ import {
 export const DEDUCTING_STATUSES = new Set(['present', 'unexcused_absence', 'makeup'])
 
 export interface AttendanceCreditInput {
+  orgId: string
   studentId: string
   classId: string
   centerId: string
@@ -47,9 +48,10 @@ export async function applyAttendanceCredit(
   const candidatesSnap = await getDocs(
     query(
       collection(db, 'enrollments'),
-      // centerId must be in the filter — firestore.rules checks resource.data.centerId, and a
-      // list query is only provably safe when every field the rule reads is also constrained
-      // by the query itself.
+      // orgId/centerId must be in the filter — firestore.rules checks resource.data's orgId
+      // and centerId, and a list query is only provably safe when every field the rule reads
+      // is also constrained by the query itself.
+      where('orgId', '==', data.orgId),
       where('centerId', '==', data.centerId),
       where('studentId', '==', data.studentId),
       where('classId', '==', data.classId),
@@ -84,6 +86,7 @@ export async function applyAttendanceCredit(
         })
 
         tx.set(doc(collection(db, 'creditLedger')), {
+          orgId: data.orgId,
           enrollmentId: enrollmentRef.id,
           studentId: data.studentId,
           classId: data.classId,

@@ -39,10 +39,15 @@ export function AttendancePage() {
 
   const { data: allClasses } = useCollection<ClassGroup>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'classes'), where('centerId', '==', selectedCenterId), orderBy('name'))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'classes'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('name'),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
 
   const classes = useMemo(() => {
@@ -64,22 +69,30 @@ export function AttendancePage() {
 
   const { data: enrollments } = useCollection<Enrollment>(
     () =>
-      classId && selectedCenterId
+      classId && selectedCenterId && profile
         ? query(
             collection(db, 'enrollments'),
-            // centerId must be in the filter — Firestore rules check resource.data.centerId,
-            // and a list query can only be proven safe when every field the rule reads is
-            // also constrained by the query itself (see firestore.rules `isStaffOfCenter`).
+            // orgId/centerId must be in the filter — Firestore rules check resource.data's
+            // orgId and centerId, and a list query can only be proven safe when every field
+            // the rule reads is also constrained by the query itself.
+            where('orgId', '==', profile.orgId),
             where('centerId', '==', selectedCenterId),
             where('classId', '==', classId),
             where('active', '==', true),
           )
         : null,
-    [classId, selectedCenterId],
+    [classId, selectedCenterId, profile],
   )
   const { data: students } = useCollection<Student>(
-    () => (selectedCenterId ? query(collection(db, 'students'), where('centerId', '==', selectedCenterId)) : null),
-    [selectedCenterId],
+    () =>
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'students'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+          )
+        : null,
+    [selectedCenterId, profile],
   )
   const studentName = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s.fullName])), [students])
   const roster = useMemo(
@@ -89,14 +102,15 @@ export function AttendancePage() {
 
   const { data: attendanceRecords } = useCollection<Attendance>(
     () =>
-      sessionId && selectedCenterId
+      sessionId && selectedCenterId && profile
         ? query(
             collection(db, 'attendance'),
+            where('orgId', '==', profile.orgId),
             where('centerId', '==', selectedCenterId),
             where('sessionId', '==', sessionId),
           )
         : null,
-    [sessionId, selectedCenterId],
+    [sessionId, selectedCenterId, profile],
   )
   const attendanceByStudent = useMemo(
     () => Object.fromEntries(attendanceRecords.map((a) => [a.studentId, a])),
@@ -107,7 +121,7 @@ export function AttendancePage() {
   // repeated opens of the same day are idempotent).
   useEffect(() => {
     setSessionId(null)
-    if (!classId || !selectedCenterId) return
+    if (!classId || !selectedCenterId || !profile) return
     let cancelled = false
     setCreatingSession(true)
     ;(async () => {
@@ -115,6 +129,7 @@ export function AttendancePage() {
       const snap = await getDoc(ref)
       if (!snap.exists()) {
         await setDoc(ref, {
+          orgId: profile.orgId,
           centerId: selectedCenterId,
           classId,
           date,
@@ -133,12 +148,13 @@ export function AttendancePage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, date, selectedCenterId])
+  }, [classId, date, selectedCenterId, profile])
 
   async function record(studentId: string, status: AttendanceStatus) {
     if (!sessionId || !classId || !selectedCenterId || !profile) return
     const ref = doc(db, 'attendance', `${sessionId}_${studentId}`)
     await setDoc(ref, {
+      orgId: profile.orgId,
       sessionId,
       classId,
       centerId: selectedCenterId,
@@ -150,7 +166,13 @@ export function AttendancePage() {
     })
     // No Cloud Function trigger runs this project (Spark plan, no billing) — apply the FIFO
     // credit deduction right here instead. See app/src/lib/creditDeduction.ts.
-    await applyAttendanceCredit(db, ref, ref.id, { studentId, classId, centerId: selectedCenterId, status })
+    await applyAttendanceCredit(db, ref, ref.id, {
+      orgId: profile.orgId,
+      studentId,
+      classId,
+      centerId: selectedCenterId,
+      status,
+    })
   }
 
   if (!selectedCenterId) {

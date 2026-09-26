@@ -2,8 +2,22 @@ import type { Timestamp } from 'firebase/firestore'
 
 export type Role = 'owner' | 'manager' | 'ta' | 'teacher' | 'parent'
 
+/**
+ * A paying customer's tenant: one physics center business (which may run several branches,
+ * see Center). Every other collection is scoped to an orgId so Firestore rules can prove two
+ * organizations' data never mixes — see firestore.rules.
+ */
+export interface Organization {
+  id: string
+  name: string
+  ownerId: string
+  createdAt: Timestamp
+}
+
 export interface AppUser {
   id: string
+  /** The organization (tenant) this account belongs to — never changes after signup. */
+  orgId: string
   email: string
   displayName: string
   role: Role
@@ -16,6 +30,7 @@ export interface AppUser {
 
 export interface Center {
   id: string
+  orgId: string
   name: string
   address: string
   createdAt: Timestamp
@@ -31,6 +46,7 @@ export interface RecurringSlot {
 
 export interface ClassGroup {
   id: string
+  orgId: string
   centerId: string
   name: string // VD: "Toán 12 - T3/T5/CN 19h"
   subject: string
@@ -46,6 +62,7 @@ export type SessionStatus = 'scheduled' | 'completed' | 'canceled'
 
 export interface ClassSession {
   id: string
+  orgId: string
   centerId: string
   classId: string
   date: string // "YYYY-MM-DD"
@@ -57,6 +74,7 @@ export interface ClassSession {
 
 export interface Student {
   id: string
+  orgId: string
   centerId: string
   fullName: string
   phone?: string
@@ -70,6 +88,7 @@ export type PackageType = 'session_pack' | 'monthly'
 
 export interface Enrollment {
   id: string
+  orgId: string
   studentId: string
   classId: string
   centerId: string
@@ -89,6 +108,7 @@ export interface Enrollment {
 /** Derived/denormalized for fast reads: sum of (totalSessions - usedSessions) across active, non-expired enrollments for a student+class. */
 export interface CreditLedgerEntry {
   id: string
+  orgId: string
   enrollmentId: string
   studentId: string
   classId: string
@@ -103,6 +123,7 @@ export type AttendanceStatus = 'present' | 'excused_absence' | 'unexcused_absenc
 
 export interface Attendance {
   id: string
+  orgId: string
   sessionId: string
   classId: string
   centerId: string
@@ -119,6 +140,7 @@ export type PaymentMethod = 'cash' | 'bank_transfer' | 'other'
 
 export interface Payment {
   id: string
+  orgId: string
   studentId: string
   enrollmentId?: string
   centerId: string
@@ -131,6 +153,7 @@ export interface Payment {
 
 export interface TeacherAttendanceRecord {
   id: string
+  orgId: string
   sessionId: string
   classId: string
   centerId: string
@@ -142,6 +165,7 @@ export interface TeacherAttendanceRecord {
 
 export interface Payroll {
   id: string
+  orgId: string
   centerId: string
   staffId: string
   month: string // "YYYY-MM"

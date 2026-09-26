@@ -15,6 +15,10 @@ service cloud.firestore {
       return me().role;
     }
 
+    function myOrgId() {
+      return me().orgId;
+    }
+
     function myCenterIds() {
       return me().centerIds;
     }
@@ -43,56 +47,68 @@ service cloud.firestore {
       return isSignedIn() && myRole() == 'parent' && studentId in myStudentIds();
     }
 
-    // --- Bootstrap marker: exactly one document, created atomically alongside the very
-    // first user's self-signup as 'owner' (see authStore.ts). Its own create rule only
-    // allows that one-time creation; nothing may ever update or delete it, so no client
-    // can mint a second owner later.
-    match /meta/bootstrap {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() &&
-        !exists(/databases/$(database)/documents/meta/bootstrap) &&
-        request.resource.data.ownerClaimed == true;
-      allow update, delete: if false;
+    // --- Organizations (tenants) ---
+    // One document per paying customer. Every other collection carries an orgId and every
+    // rule below checks it against myOrgId() — that's what actually keeps two organizations'
+    // data apart; centerIds/roles only decide what a user can do *within* their own org.
+    match /organizations/{orgId} {
+      allow read: if isSignedIn() && myOrgId() == orgId;
+      // Created once, atomically, by the account that becomes its owner (see the
+      // `users/{userId}` create rule below, which requires this same-transaction pairing).
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isOwnerOrManager() && myOrgId() == orgId;
+      allow delete: if false;
     }
 
     // --- Users ---
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isOwnerOrManager());
-      // Self-signup always writes role 'parent' for itself — except the very first account
-      // ever, which is allowed 'owner' only when it also creates meta/bootstrap in the same
-      // transaction (getAfter reads the post-write state, so this is impossible to fake:
-      // claiming 'owner' without that companion write fails, and meta/bootstrap's own create
-      // rule above means only one caller can ever win that race).
+      allow read: if isSignedIn() &&
+        (request.auth.uid == userId || (isOwnerOrManager() && resource.data.orgId == myOrgId()));
+      // Signing up either creates a brand-new organization (this account becomes its
+      // 'owner' — the very first account for that org) or joins an existing one by its
+      // orgId (always as 'parent'; staff roles are granted afterwards from the Nhân sự
+      // page by that org's own owner/manager). `getAfter` reads the post-write state, so
+      // claiming 'owner' is only valid when this same request also creates that
+      // organizations/{orgId} doc — and that doc's own create rule (above) means each
+      // orgId can only ever be claimed once, so nobody can mint themselves a second owner
+      // for an org that already has one.
       allow create: if isSignedIn() && request.auth.uid == userId &&
         (
-          request.resource.data.role == 'parent' ||
           (
             request.resource.data.role == 'owner' &&
-            !exists(/databases/$(database)/documents/meta/bootstrap) &&
-            getAfter(/databases/$(database)/documents/meta/bootstrap).data.ownerClaimed == true
+            !exists(/databases/$(database)/documents/organizations/$(request.resource.data.orgId)) &&
+            getAfter(/databases/$(database)/documents/organizations/$(request.resource.data.orgId)).data.ownerId == request.auth.uid
+          ) ||
+          (
+            request.resource.data.role == 'parent' &&
+            exists(/databases/$(database)/documents/organizations/$(request.resource.data.orgId))
           )
         );
-      // Only owner/manager can change role/centerIds/studentIds (access control fields).
-      allow update: if isOwnerOrManager() ||
+      // Only owner/manager of the SAME org can change role/centerIds/studentIds.
+      allow update: if (isOwnerOrManager() && resource.data.orgId == myOrgId() && request.resource.data.orgId == resource.data.orgId) ||
         (isSignedIn() && request.auth.uid == userId &&
           request.resource.data.role == resource.data.role &&
           request.resource.data.centerIds == resource.data.centerIds);
-      allow delete: if isOwner();
+      allow delete: if isOwner() && resource.data.orgId == myOrgId();
     }
 
     // --- Centers ---
     match /centers/{centerId} {
-      allow read: if isStaffOfCenter(centerId);
-      allow write: if isOwnerOrManager();
+      allow read: if isStaffOfCenter(centerId) && resource.data.orgId == myOrgId();
+      allow create: if isOwnerOrManager() && request.resource.data.orgId == myOrgId();
+      allow update, delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
     }
 
     // --- Classes ---
     match /classes/{classId} {
-      // Any signed-in user can read class metadata (name/schedule/teacher) — no financial
-      // data lives here. Parents need this to show "which class is my child in".
-      allow read: if isSignedIn();
-      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId);
-      allow update, delete: if isOwnerOrManager() && isStaffOfCenter(resource.data.centerId);
+      // Any signed-in user of the same org can read class metadata (name/schedule/teacher)
+      // — no financial data lives here. Parents need this to show "which class is my child
+      // in".
+      allow read: if isSignedIn() && resource.data.orgId == myOrgId();
+      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId();
+      allow update, delete: if isOwnerOrManager() && isStaffOfCenter(resource.data.centerId) &&
+        resource.data.orgId == myOrgId();
     }
 
     // --- Class sessions ---
@@ -101,70 +117,83 @@ service cloud.firestore {
       // today's session doc exists yet is a `get` on a possibly-nonexistent document, and
       // without this guard `resource.data.centerId` throws (resource is null) instead of
       // just correctly reporting "not found".
-      allow read: if resource == null || isStaffOfCenter(resource.data.centerId);
+      allow read: if resource == null ||
+        (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId());
       // Any staff of the center (not just owner/manager) can create today's session doc —
       // teachers/TAs open Attendance and get-or-create it on the fly.
-      allow create: if isStaffOfCenter(request.resource.data.centerId);
-      allow update: if isStaffOfCenter(resource.data.centerId);
-      allow delete: if isOwnerOrManager();
+      allow create: if isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId();
+      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId();
+      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
     }
 
     // --- Students ---
     match /students/{studentId} {
-      allow read: if isStaffOfCenter(resource.data.centerId) || isParentOfStudent(studentId);
-      allow create, update: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId);
-      allow delete: if isOwner();
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+        isParentOfStudent(studentId);
+      allow create, update: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId();
+      allow delete: if isOwner() && resource.data.orgId == myOrgId();
     }
 
     // --- Enrollments (session packages) ---
     match /enrollments/{enrollmentId} {
-      allow read: if isStaffOfCenter(resource.data.centerId) || isParentOfStudent(resource.data.studentId);
-      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId);
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+        isParentOfStudent(resource.data.studentId);
+      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId();
       // Selling/editing a package (any field) stays owner/manager only. Any staff of the
       // center (teacher/TA included) may additionally update *only* the three credit-tracking
       // fields — this is what lets attendance run the FIFO deduction straight from the client
       // (see app/src/lib/creditDeduction.ts) without a Cloud Function in between.
-      allow update: if (isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId)) ||
-        (isStaffOfCenter(resource.data.centerId) &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['usedSessions', 'remainingSessions', 'active']));
-      allow delete: if isOwner();
+      allow update: if resource.data.orgId == myOrgId() &&
+        (
+          (isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId)) ||
+          (isStaffOfCenter(resource.data.centerId) &&
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['usedSessions', 'remainingSessions', 'active']))
+        );
+      allow delete: if isOwner() && resource.data.orgId == myOrgId();
     }
 
     // --- Credit ledger (append-only, system-managed) ---
     match /creditLedger/{entryId} {
-      allow read: if isStaff() || isParentOfStudent(resource.data.studentId);
-      allow create: if isStaff();
+      allow read: if (isStaff() && resource.data.orgId == myOrgId()) || isParentOfStudent(resource.data.studentId);
+      allow create: if isStaff() && request.resource.data.orgId == myOrgId();
       allow update, delete: if false;
     }
 
     // --- Attendance ---
     match /attendance/{attendanceId} {
-      allow read: if isStaffOfCenter(resource.data.centerId) || isParentOfStudent(resource.data.studentId);
-      allow create: if isStaffOfCenter(request.resource.data.centerId);
-      allow update: if isStaffOfCenter(resource.data.centerId);
-      allow delete: if isOwnerOrManager();
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+        isParentOfStudent(resource.data.studentId);
+      allow create: if isStaffOfCenter(request.resource.data.centerId) && request.resource.data.orgId == myOrgId();
+      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId();
+      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
     }
 
     // --- Payments ---
     match /payments/{paymentId} {
-      allow read: if isStaffOfCenter(resource.data.centerId) || isParentOfStudent(resource.data.studentId);
-      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId);
-      allow update, delete: if isOwner();
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+        isParentOfStudent(resource.data.studentId);
+      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId();
+      allow update, delete: if isOwner() && resource.data.orgId == myOrgId();
     }
 
     // --- Teacher/TA session confirmation ---
     match /teacherAttendance/{id} {
-      allow read: if isStaffOfCenter(resource.data.centerId);
-      allow create, update: if isStaffOfCenter(resource.data.centerId);
-      allow delete: if isOwnerOrManager();
+      allow read: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId();
+      allow create, update: if isStaffOfCenter(resource.data.centerId) && request.resource.data.orgId == myOrgId();
+      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
     }
 
     // --- Payroll (financial, restricted) ---
     match /payroll/{id} {
-      allow read: if isOwnerOrManager() ||
+      allow read: if (isOwnerOrManager() && resource.data.orgId == myOrgId()) ||
         (isSignedIn() && resource.data.staffId == request.auth.uid);
-      allow write: if isOwnerOrManager();
+      allow create: if isOwnerOrManager() && request.resource.data.orgId == myOrgId();
+      allow update, delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
     }
   }
 }

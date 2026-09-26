@@ -14,15 +14,20 @@ const ALL_WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6]
 export function ClassesPage() {
   const { profile } = useAuthStore()
   const { selectedCenterId } = useCenterStore()
-  const { teachers, tas } = useStaffOfCenter(selectedCenterId)
+  const { teachers, tas } = useStaffOfCenter(profile?.orgId, selectedCenterId)
   const manage = canManage(profile?.role)
 
   const { data: classes, loading } = useCollection<ClassGroup>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'classes'), where('centerId', '==', selectedCenterId), orderBy('name'))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'classes'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('name'),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
 
   const [name, setName] = useState('')
@@ -39,10 +44,11 @@ export function ClassesPage() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !selectedCenterId || !teacherId) return
+    if (!name.trim() || !selectedCenterId || !teacherId || !profile) return
     setSubmitting(true)
     try {
       await addDoc(collection(db, 'classes'), {
+        orgId: profile.orgId,
         centerId: selectedCenterId,
         name: name.trim(),
         subject: subject.trim(),

@@ -13,15 +13,27 @@ export function DashboardPage() {
   const { selectedCenterId, centers } = useCenterStore()
 
   const { data: students } = useCollection<Student>(
-    () => (selectedCenterId ? query(collection(db, 'students'), where('centerId', '==', selectedCenterId)) : null),
-    [selectedCenterId],
+    () =>
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'students'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+          )
+        : null,
+    [selectedCenterId, profile],
   )
   const { data: enrollments } = useCollection<Enrollment>(
     () =>
-      selectedCenterId
-        ? query(collection(db, 'enrollments'), where('centerId', '==', selectedCenterId), where('active', '==', true))
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'enrollments'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            where('active', '==', true),
+          )
         : null,
-    [selectedCenterId],
+    [selectedCenterId, profile],
   )
 
   const lowBalance = enrollments.filter((e) => e.remainingSessions <= LOW_BALANCE_THRESHOLD)
