@@ -2,7 +2,7 @@ import { deleteApp, initializeApp, type App } from 'firebase-admin/app'
 import { getFirestore, Timestamp, type Firestore } from 'firebase-admin/firestore'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { applyAttendanceCredit } from './creditDeduction'
+import { applyAttendanceCredit, type AttendanceData } from './creditDeduction'
 
 // These tests talk to the Firestore emulator (FIRESTORE_EMULATOR_HOST must be set,
 // e.g. by running `firebase emulators:exec --only firestore "npm test"` from functions/).
@@ -57,19 +57,30 @@ function freshIds() {
   return { studentId: `student-${suffix}`, classId: `class-${suffix}` }
 }
 
+/**
+ * Creates the attendance doc first (as the app does via `setDoc`) and only then runs the
+ * deduction logic — mirroring production, where the Cloud Functions trigger only fires once
+ * the document already exists, so `applyAttendanceCredit`'s internal `.update()` calls have
+ * something to update.
+ */
+async function recordAttendance(data: AttendanceData) {
+  const ref = db.collection('attendance').doc()
+  await ref.set(data)
+  await applyAttendanceCredit(db, ref, ref.id, data)
+  return ref
+}
+
 describe('applyAttendanceCredit', () => {
   it('deducts one session and writes a ledger entry on "present"', async () => {
     const { studentId, classId } = freshIds()
     const enrollmentRef = await seedEnrollment(studentId, classId)
-    const attendanceRef = db.collection('attendance').doc()
-    const attendanceId = attendanceRef.id
-
-    await applyAttendanceCredit(db, attendanceRef, attendanceId, {
+    const attendanceRef = await recordAttendance({
       studentId,
       classId,
       centerId: 'center-1',
       status: 'present',
     })
+    const attendanceId = attendanceRef.id
 
     const enrollmentAfter = (await enrollmentRef.get()).data()!
     expect(enrollmentAfter.usedSessions).toBe(1)
@@ -90,13 +101,7 @@ describe('applyAttendanceCredit', () => {
     for (const status of ['unexcused_absence', 'makeup']) {
       const { studentId, classId } = freshIds()
       const enrollmentRef = await seedEnrollment(studentId, classId)
-      const attendanceRef = db.collection('attendance').doc()
-      await applyAttendanceCredit(db, attendanceRef, attendanceRef.id, {
-        studentId,
-        classId,
-        centerId: 'center-1',
-        status,
-      })
+      await recordAttendance({ studentId, classId, centerId: 'center-1', status })
       const enrollmentAfter = (await enrollmentRef.get()).data()!
       expect(enrollmentAfter.usedSessions).toBe(1)
     }
@@ -105,9 +110,7 @@ describe('applyAttendanceCredit', () => {
   it('does not deduct on "excused_absence" and flags creditApplied false', async () => {
     const { studentId, classId } = freshIds()
     const enrollmentRef = await seedEnrollment(studentId, classId)
-    const attendanceRef = db.collection('attendance').doc()
-
-    await applyAttendanceCredit(db, attendanceRef, attendanceRef.id, {
+    const attendanceRef = await recordAttendance({
       studentId,
       classId,
       centerId: 'center-1',
@@ -124,9 +127,7 @@ describe('applyAttendanceCredit', () => {
   it('is idempotent when creditApplied is already true', async () => {
     const { studentId, classId } = freshIds()
     const enrollmentRef = await seedEnrollment(studentId, classId)
-    const attendanceRef = db.collection('attendance').doc()
-
-    await applyAttendanceCredit(db, attendanceRef, attendanceRef.id, {
+    await recordAttendance({
       studentId,
       classId,
       centerId: 'center-1',
@@ -141,9 +142,7 @@ describe('applyAttendanceCredit', () => {
   it('skips expired enrollments and flags "no_active_enrollment"', async () => {
     const { studentId, classId } = freshIds()
     await seedEnrollment(studentId, classId, { expiresAt: futureTimestamp(-1) })
-    const attendanceRef = db.collection('attendance').doc()
-
-    await applyAttendanceCredit(db, attendanceRef, attendanceRef.id, {
+    const attendanceRef = await recordAttendance({
       studentId,
       classId,
       centerId: 'center-1',
@@ -162,8 +161,7 @@ describe('applyAttendanceCredit', () => {
     })
     await seedEnrollment(studentId, classId, { purchasedAt: Timestamp.fromMillis(Date.now() - 1000) })
 
-    const attendanceRef = db.collection('attendance').doc()
-    await applyAttendanceCredit(db, attendanceRef, attendanceRef.id, {
+    const attendanceRef = await recordAttendance({
       studentId,
       classId,
       centerId: 'center-1',
