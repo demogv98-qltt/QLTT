@@ -14,8 +14,12 @@ const ALL_WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6]
 export function ClassesPage() {
   const { profile } = useAuthStore()
   const { selectedCenterId } = useCenterStore()
-  const { teachers, tas } = useStaffOfCenter(profile?.orgId, selectedCenterId)
   const manage = canManage(profile?.role)
+  // firestore.rules only allows owner/manager to list all of an org's users (the query this
+  // hook runs) — every other role (teacher/ta/parent, who can all reach this page) would get
+  // a permission-denied error firing on every mount for a query they never even use (the
+  // returned teachers/tas only feed the owner/manager-only create-class form below).
+  const { teachers, tas } = useStaffOfCenter(manage ? profile?.orgId : undefined, selectedCenterId)
 
   const { data: classes, loading } = useCollection<ClassGroup>(
     () =>

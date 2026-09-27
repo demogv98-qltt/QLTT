@@ -98,6 +98,7 @@ export async function applyAttendanceCredit(
 
         tx.set(doc(collection(db, 'creditLedger')), {
           orgId: data.orgId,
+          centerId: data.centerId,
           enrollmentId: enrollmentRef.id,
           studentId: data.studentId,
           classId: data.classId,

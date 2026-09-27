@@ -116,6 +116,8 @@ export interface Enrollment {
 export interface CreditLedgerEntry {
   id: string
   orgId: string
+  /** Needed so firestore.rules can scope reads to isStaffOfCenter, not just isStaff (org-wide). */
+  centerId: string
   enrollmentId: string
   studentId: string
   classId: string

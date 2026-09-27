@@ -154,17 +154,26 @@ export function AttendancePage() {
   async function record(studentId: string, status: AttendanceStatus) {
     if (!sessionId || !classId || !selectedCenterId || !profile) return
     const ref = doc(db, 'attendance', `${sessionId}_${studentId}`)
-    await setDoc(ref, {
-      orgId: profile.orgId,
-      sessionId,
-      classId,
-      centerId: selectedCenterId,
-      studentId,
-      status,
-      creditApplied: false,
-      recordedBy: profile.id,
-      recordedAt: serverTimestamp(),
-    })
+    // `merge: true` and deliberately NOT including `creditApplied` here: that field belongs
+    // exclusively to applyAttendanceCredit's own transaction (see creditDeduction.ts). A
+    // non-merge setDoc that force-reset creditApplied:false on every call used to race with
+    // it — two overlapping record() calls for the same student (e.g. a fast double-click)
+    // could have the second call's blind reset clobber the first call's already-committed
+    // creditApplied:true, defeating the idempotency lock and double-deducting a session.
+    await setDoc(
+      ref,
+      {
+        orgId: profile.orgId,
+        sessionId,
+        classId,
+        centerId: selectedCenterId,
+        studentId,
+        status,
+        recordedBy: profile.id,
+        recordedAt: serverTimestamp(),
+      },
+      { merge: true },
+    )
     // No Cloud Function trigger runs this project (Spark plan, no billing) — apply the FIFO
     // credit deduction right here instead. See app/src/lib/creditDeduction.ts.
     await applyAttendanceCredit(db, ref, ref.id, {

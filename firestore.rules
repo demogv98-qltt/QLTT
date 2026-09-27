@@ -54,6 +54,16 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email == 'haunn.vietanhschool@gmail.com';
     }
 
+    // A suspended organization must be locked out of its actual data, not just have the
+    // rendered app hide it (Layout.tsx only hides the UI — that's not enforcement on its
+    // own). Every business-data collection below requires this. `organizations/{orgId}` and
+    // `users/{uid}` are deliberately NOT gated by it: the app has to be able to read those
+    // two to even determine *that* the org is suspended and show the lockout screen.
+    function orgActive() {
+      return isSuperAdmin() ||
+        get(/databases/$(database)/documents/organizations/$(myOrgId())).data.status != 'suspended';
+    }
+
     // --- Organizations (tenants) ---
     // One document per paying customer. Every other collection carries an orgId and every
     // rule below checks it against myOrgId() — that's what actually keeps two organizations'
@@ -109,9 +119,14 @@ service cloud.firestore {
 
     // --- Centers ---
     match /centers/{centerId} {
-      allow read: if isStaffOfCenter(centerId) && resource.data.orgId == myOrgId();
-      allow create: if isOwnerOrManager() && request.resource.data.orgId == myOrgId();
-      allow update, delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
+      allow read: if isStaffOfCenter(centerId) && resource.data.orgId == myOrgId() && orgActive();
+      allow create: if isOwnerOrManager() && request.resource.data.orgId == myOrgId() && orgActive();
+      // orgId is pinned to its existing value — without this, an owner/manager editing their
+      // own center could reassign the document to a different org's namespace by changing
+      // the field, since the rule otherwise only checks which org the doc *currently* belongs to.
+      allow update: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive() &&
+        request.resource.data.orgId == resource.data.orgId;
+      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Classes ---
@@ -119,11 +134,17 @@ service cloud.firestore {
       // Any signed-in user of the same org can read class metadata (name/schedule/teacher)
       // — no financial data lives here. Parents need this to show "which class is my child
       // in".
-      allow read: if isSignedIn() && resource.data.orgId == myOrgId();
+      allow read: if isSignedIn() && resource.data.orgId == myOrgId() && orgActive();
       allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
-        request.resource.data.orgId == myOrgId();
-      allow update, delete: if isOwnerOrManager() && isStaffOfCenter(resource.data.centerId) &&
-        resource.data.orgId == myOrgId();
+        request.resource.data.orgId == myOrgId() && orgActive();
+      // orgId/centerId pinned to their existing values on update — see the `centers` rule
+      // above for why (prevents a document from being reassigned to another org/center).
+      allow update: if isOwnerOrManager() && isStaffOfCenter(resource.data.centerId) &&
+        resource.data.orgId == myOrgId() && orgActive() &&
+        request.resource.data.orgId == resource.data.orgId &&
+        request.resource.data.centerId == resource.data.centerId;
+      allow delete: if isOwnerOrManager() && isStaffOfCenter(resource.data.centerId) &&
+        resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Class sessions ---
@@ -133,30 +154,42 @@ service cloud.firestore {
       // without this guard `resource.data.centerId` throws (resource is null) instead of
       // just correctly reporting "not found".
       allow read: if resource == null ||
-        (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId());
+        (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive());
       // Any staff of the center (not just owner/manager) can create today's session doc —
       // teachers/TAs open Attendance and get-or-create it on the fly.
       allow create: if isStaffOfCenter(request.resource.data.centerId) &&
-        request.resource.data.orgId == myOrgId();
-      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId();
-      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
+        request.resource.data.orgId == myOrgId() && orgActive();
+      // orgId/centerId pinned on update — see the `centers` rule above.
+      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive() &&
+        request.resource.data.orgId == resource.data.orgId &&
+        request.resource.data.centerId == resource.data.centerId;
+      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Students ---
     match /students/{studentId} {
-      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive()) ||
         isParentOfStudent(studentId);
-      allow create, update: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
-        request.resource.data.orgId == myOrgId();
-      allow delete: if isOwner() && resource.data.orgId == myOrgId();
+      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId() && orgActive();
+      // Combining create+update in one rule that only checks request.resource.data (as this
+      // used to) never looks at the EXISTING document on an update — meaning it never
+      // verified the student being edited actually belonged to the caller's own org, only
+      // that the *new* data would. Split out so update also requires the existing doc to
+      // already belong to the caller's org, and pins orgId/centerId to stay the same.
+      allow update: if isOwnerOrManager() && isStaffOfCenter(resource.data.centerId) &&
+        resource.data.orgId == myOrgId() && orgActive() &&
+        request.resource.data.orgId == resource.data.orgId &&
+        request.resource.data.centerId == resource.data.centerId;
+      allow delete: if isOwner() && resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Enrollments (session packages) ---
     match /enrollments/{enrollmentId} {
-      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive()) ||
         isParentOfStudent(resource.data.studentId);
       allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
-        request.resource.data.orgId == myOrgId();
+        request.resource.data.orgId == myOrgId() && orgActive();
       // Selling/editing a package (any field, any value) stays owner/manager only. Any staff
       // of the center (teacher/TA included) may additionally update the three
       // credit-tracking fields — this is what lets attendance run the FIFO deduction
@@ -164,7 +197,10 @@ service cloud.firestore {
       // Function in between — but ONLY as exactly "consume one session": limiting it to
       // these three field names isn't enough on its own (a malicious client could still set
       // remainingSessions to any value it likes), so the rule also pins the exact arithmetic.
-      allow update: if resource.data.orgId == myOrgId() &&
+      // orgId is also pinned to its existing value in both branches — otherwise an
+      // owner/manager could relabel a document's orgId while still passing every other check.
+      allow update: if resource.data.orgId == myOrgId() && orgActive() &&
+        request.resource.data.orgId == resource.data.orgId &&
         (
           (isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId)) ||
           (isStaffOfCenter(resource.data.centerId) &&
@@ -174,47 +210,68 @@ service cloud.firestore {
             request.resource.data.remainingSessions == resource.data.totalSessions - request.resource.data.usedSessions &&
             request.resource.data.active == (request.resource.data.remainingSessions > 0))
         );
-      allow delete: if isOwner() && resource.data.orgId == myOrgId();
+      allow delete: if isOwner() && resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Credit ledger (append-only, system-managed) ---
     match /creditLedger/{entryId} {
-      allow read: if (isStaff() && resource.data.orgId == myOrgId()) || isParentOfStudent(resource.data.studentId);
-      allow create: if isStaff() && request.resource.data.orgId == myOrgId();
+      // isStaffOfCenter (not just isStaff) — a staff member assigned to one center must not
+      // be able to read another center's session-consumption history just because it's the
+      // same organization. Requires `centerId` on every ledger entry (see
+      // app/src/lib/creditDeduction.ts and app/src/types/index.ts).
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive()) ||
+        isParentOfStudent(resource.data.studentId);
+      allow create: if isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId() && orgActive();
       allow update, delete: if false;
     }
 
     // --- Attendance ---
     match /attendance/{attendanceId} {
-      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive()) ||
         isParentOfStudent(resource.data.studentId);
-      allow create: if isStaffOfCenter(request.resource.data.centerId) && request.resource.data.orgId == myOrgId();
-      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId();
-      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
+      allow create: if isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId() && orgActive();
+      // orgId/centerId pinned to their existing values — see the `centers` rule above for why.
+      // Every other field (status, creditApplied, enrollmentId, deductionNote, ...) stays
+      // free to change: both AttendancePage's own re-record flow and creditDeduction.ts's
+      // transaction write to this doc.
+      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive() &&
+        request.resource.data.orgId == resource.data.orgId &&
+        request.resource.data.centerId == resource.data.centerId;
+      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Payments ---
     match /payments/{paymentId} {
-      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId()) ||
+      allow read: if (isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive()) ||
         isParentOfStudent(resource.data.studentId);
       allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
-        request.resource.data.orgId == myOrgId();
-      allow update, delete: if isOwner() && resource.data.orgId == myOrgId();
+        request.resource.data.orgId == myOrgId() && orgActive();
+      allow update, delete: if isOwner() && resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Teacher/TA session confirmation ---
     match /teacherAttendance/{id} {
-      allow read: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId();
-      allow create, update: if isStaffOfCenter(resource.data.centerId) && request.resource.data.orgId == myOrgId();
-      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
+      allow read: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive();
+      // create/update used to be combined in one rule that read `resource.data.centerId` —
+      // `resource` is null on create (no document exists yet), so every create request threw
+      // and was denied. Split so create checks request.resource.data instead, and update
+      // additionally pins orgId/centerId to their existing values (see `centers` rule above).
+      allow create: if isStaffOfCenter(request.resource.data.centerId) &&
+        request.resource.data.orgId == myOrgId() && orgActive();
+      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive() &&
+        request.resource.data.orgId == resource.data.orgId &&
+        request.resource.data.centerId == resource.data.centerId;
+      allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive();
     }
 
     // --- Payroll (financial, restricted) ---
     match /payroll/{id} {
-      allow read: if (isOwnerOrManager() && resource.data.orgId == myOrgId()) ||
+      allow read: if (isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive()) ||
         (isSignedIn() && resource.data.staffId == request.auth.uid);
-      allow create: if isOwnerOrManager() && request.resource.data.orgId == myOrgId();
-      allow update, delete: if isOwnerOrManager() && resource.data.orgId == myOrgId();
+      allow create: if isOwnerOrManager() && request.resource.data.orgId == myOrgId() && orgActive();
+      allow update, delete: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive();
     }
   }
 }
