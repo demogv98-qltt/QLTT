@@ -14,10 +14,14 @@ import { db } from '../lib/firebase'
 import { studentAvatar } from '../lib/avatar'
 import { applyAttendanceCredit } from '../lib/creditDeduction'
 import { useCollection } from '../lib/useCollection'
-import { todayISODate, weekdayOf, WEEKDAY_LABELS } from '../lib/schedule'
+import { todayISODate, weekdayOf } from '../lib/schedule'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
+import { useOrgStore } from '../stores/orgStore'
 import { canManage } from '../lib/roles'
+import { QRScannerModal } from '../components/QRScannerModal'
+import { StudentCardModal } from '../components/StudentCardModal'
+import { Camera, QrCode, MessageCircle, Clock, CalendarDays, CheckCircle2 } from 'lucide-react'
 import type { Attendance, AttendanceStatus, ClassGroup, Enrollment, Student } from '../types'
 
 const STATUS_LABELS: Record<AttendanceStatus, string> = {
@@ -28,16 +32,19 @@ const STATUS_LABELS: Record<AttendanceStatus, string> = {
 }
 
 const STATUS_COLORS: Record<AttendanceStatus, string> = {
-  present: 'bg-green-100 text-green-700',
-  excused_absence: 'bg-blue-100 text-blue-700',
-  unexcused_absence: 'bg-red-100 text-red-700',
-  makeup: 'bg-purple-100 text-purple-700',
+  present: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  excused_absence: 'bg-blue-100 text-blue-800 border-blue-200',
+  unexcused_absence: 'bg-red-100 text-red-800 border-red-200',
+  makeup: 'bg-purple-100 text-purple-800 border-purple-200',
 }
 
 export function AttendancePage() {
   const { profile } = useAuthStore()
-  const { selectedCenterId } = useCenterStore()
+  const { selectedCenterId, centers } = useCenterStore()
+  const { organization } = useOrgStore()
   const manage = canManage(profile?.role)
+
+  const selectedCenter = centers.find((c) => c.id === selectedCenterId)
 
   const { data: allClasses } = useCollection<ClassGroup>(
     () =>
@@ -66,6 +73,10 @@ export function AttendancePage() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [creatingSession, setCreatingSession] = useState(false)
 
+  // QR scanner & student card modals
+  const [showScanner, setShowScanner] = useState(false)
+  const [badgeStudent, setBadgeStudent] = useState<Student | null>(null)
+
   useEffect(() => {
     if (paramClassId) {
       setClassId(paramClassId)
@@ -82,9 +93,6 @@ export function AttendancePage() {
       classId && selectedCenterId && profile
         ? query(
             collection(db, 'enrollments'),
-            // orgId/centerId must be in the filter — Firestore rules check resource.data's
-            // orgId and centerId, and a list query can only be proven safe when every field
-            // the rule reads is also constrained by the query itself.
             where('orgId', '==', profile.orgId),
             where('centerId', '==', selectedCenterId),
             where('classId', '==', classId),
@@ -93,6 +101,7 @@ export function AttendancePage() {
         : null,
     [classId, selectedCenterId, profile],
   )
+
   const { data: students } = useCollection<Student>(
     () =>
       selectedCenterId && profile
@@ -104,7 +113,8 @@ export function AttendancePage() {
         : null,
     [selectedCenterId, profile],
   )
-  const studentName = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s.fullName])), [students])
+  const studentMap = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
+
   const roster = useMemo(
     () => [...new Set(enrollments.map((e) => e.studentId))],
     [enrollments],
@@ -127,8 +137,7 @@ export function AttendancePage() {
     [attendanceRecords],
   )
 
-  // Get-or-create the concrete session doc for this class+date (id is deterministic so
-  // repeated opens of the same day are idempotent).
+  // Get-or-create the concrete session doc for this class+date
   useEffect(() => {
     setSessionId(null)
     if (!classId || !selectedCenterId || !profile) return
@@ -157,8 +166,7 @@ export function AttendancePage() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, date, selectedCenterId, profile])
+  }, [classId, date, selectedCenterId, profile, todaysSlot])
 
   async function record(studentId: string, status: AttendanceStatus) {
     if (!sessionId || !classId || !selectedCenterId || !profile) return
@@ -174,8 +182,7 @@ export function AttendancePage() {
       recordedBy: profile.id,
       recordedAt: serverTimestamp(),
     })
-    // No Cloud Function trigger runs this project (Spark plan, no billing) — apply the FIFO
-    // credit deduction right here instead. See app/src/lib/creditDeduction.ts.
+    // Apply FIFO credit deduction directly
     await applyAttendanceCredit(db, ref, ref.id, {
       orgId: profile.orgId,
       studentId,
@@ -185,90 +192,239 @@ export function AttendancePage() {
     })
   }
 
+  // QR Code scan processing
+  async function handleQRScan(scannedStudentId: string) {
+    const student = studentMap.get(scannedStudentId)
+    if (!student) {
+      return {
+        success: false,
+        message: `Mã không hợp lệ hoặc học sinh không thuộc cơ sở này (${scannedStudentId.slice(0, 8)}...)`,
+      }
+    }
+    if (!sessionId) {
+      return {
+        success: false,
+        studentName: student.fullName,
+        message: 'Ca học chưa sẵn sàng. Vui lòng chọn lớp trước khi quét mã.',
+      }
+    }
+    await record(student.id, 'present')
+    return {
+      success: true,
+      studentName: student.fullName,
+      message: 'Đã điểm danh CÓ MẶT và tự động trừ 1 buổi thành công!',
+    }
+  }
+
+  // Generate Zalo notification URL
+  function getZaloNoticeUrl(student: Student, status?: AttendanceStatus) {
+    const phone = (student.parentPhone || student.phone || '').replace(/\D/g, '')
+    const className = selectedClass?.name || 'Toán học'
+    const statusText = status ? STATUS_LABELS[status] : 'chưa điểm danh'
+    const text = encodeURIComponent(
+      `Kính gửi phụ huynh em ${student.fullName},\n` +
+        `Trung tâm Toán học thông báo: Ngày ${date}, tại ca học lớp ${className}, em đã được điểm danh: ${statusText}.\n` +
+        `Trung tâm xin thông báo để gia đình nắm thông tin ạ!`,
+    )
+    return phone ? `https://zalo.me/${phone}` : `https://zalo.me?text=${text}`
+  }
+
   if (!selectedCenterId) {
-    return <p className="text-sm text-gray-500">Chưa có cơ sở nào — hãy tạo cơ sở trước.</p>
+    return <p className="text-sm text-slate-500">Chưa có cơ sở nào — hãy tạo cơ sở trước.</p>
   }
 
   return (
-    <div className="max-w-3xl">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">Điểm danh</h2>
+    <div className="max-w-4xl space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            Điểm danh ca học
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+            Tự động trừ buổi học trong gói theo cơ chế FIFO · Hỗ trợ quét mã QR 1 chạm
+          </p>
+        </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-2 text-sm"
-        />
-        <select
-          value={classId}
-          onChange={(e) => setClassId(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-2 text-sm"
-        >
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        {/* Big QR Scan button */}
+        {sessionId && (
+          <button
+            type="button"
+            onClick={() => setShowScanner(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors"
+          >
+            <Camera className="h-4 w-4" />
+            Quét mã QR điểm danh
+          </button>
+        )}
+      </div>
+
+      {/* Date & Class Select Bar */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-indigo-600" />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 focus:border-indigo-600 focus:outline-hidden"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={classId}
+              onChange={(e) => setClassId(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 focus:border-indigo-600 focus:outline-hidden"
+            >
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {selectedClass && todaysSlot && (
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+            <Clock className="h-3.5 w-3.5" />
+            Ca học: {todaysSlot.startTime} - {todaysSlot.endTime} (Phòng: {selectedClass.room || 'Chưa xếp'})
+          </div>
+        )}
+
         {selectedClass && !todaysSlot && (
-          <span className="self-center text-xs text-amber-600">
-            Ngày này không thuộc lịch cố định của lớp — vẫn có thể điểm danh (buổi học bù/phát sinh).
+          <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+            Ngày {date} không thuộc lịch định kỳ — vẫn điểm danh được (học bù / ca tăng cường).
           </span>
         )}
       </div>
 
       {classes.length === 0 && (
-        <p className="text-sm text-gray-500">Bạn chưa được phân công lớp nào ở cơ sở này.</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          Bạn chưa được phân công lớp nào ở cơ sở này.
+        </div>
       )}
 
-      {creatingSession && <p className="text-sm text-gray-500">Đang chuẩn bị buổi học...</p>}
+      {creatingSession && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 animate-pulse">
+          Đang chuẩn bị buổi học...
+        </div>
+      )}
 
       {sessionId && roster.length === 0 && (
-        <p className="text-sm text-gray-500">Chưa có học sinh nào đăng ký gói buổi cho lớp này.</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          Chưa có học sinh nào đăng ký gói buổi cho lớp này.
+        </div>
       )}
 
       {sessionId && roster.length > 0 && (
-        <ul className="space-y-2">
-          {roster.map((studentId) => {
-            const recorded = attendanceByStudent[studentId]
-            return (
-              <li
-                key={studentId}
-                className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3"
-              >
-                <span className="font-medium text-gray-900">
-                  <span className="mr-2">{studentAvatar(studentId)}</span>
-                  {studentName[studentId] ?? studentId}
-                </span>
-                {recorded ? (
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[recorded.status]}`}>
-                    {STATUS_LABELS[recorded.status]}
-                  </span>
-                ) : (
-                  <div className="flex gap-1">
-                    {(Object.keys(STATUS_LABELS) as AttendanceStatus[]).map((status) => (
-                      <button
-                        key={status}
-                        type="button"
-                        onClick={() => record(studentId, status)}
-                        className={`rounded-md px-2 py-1 text-xs font-medium hover:opacity-80 ${STATUS_COLORS[status]}`}
-                      >
-                        {STATUS_LABELS[status]}
-                      </button>
-                    ))}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
+            <span>Danh sách học sinh ({roster.length} em)</span>
+            <span>Trạng thái chuyên cần & Thao tác</span>
+          </div>
+
+          <ul className="space-y-2.5">
+            {roster.map((studentId) => {
+              const recorded = attendanceByStudent[studentId]
+              const studentObj = studentMap.get(studentId)
+
+              return (
+                <li
+                  key={studentId}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-colors hover:border-slate-300"
+                >
+                  {/* Student Info */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-2xl shrink-0">{studentAvatar(studentId)}</span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                        {studentObj?.fullName ?? studentId}
+                      </p>
+                      <p className="text-xs text-slate-400 truncate">
+                        PH: {studentObj?.parentPhone || studentObj?.phone || 'Chưa cập nhật SĐT'}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+
+                  {/* Status Pills / Actions */}
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {recorded ? (
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold border ${STATUS_COLORS[recorded.status]}`}
+                      >
+                        {STATUS_LABELS[recorded.status]}
+                      </span>
+                    ) : (
+                      <div className="flex gap-1.5 flex-wrap">
+                        {(Object.keys(STATUS_LABELS) as AttendanceStatus[]).map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => record(studentId, status)}
+                            className={`rounded-xl px-2.5 py-1 text-xs font-bold border transition-transform active:scale-95 shadow-2xs ${STATUS_COLORS[status]}`}
+                          >
+                            {STATUS_LABELS[status]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Secondary Actions: Student QR Card & Zalo Notice */}
+                    <div className="flex items-center gap-1 border-l border-slate-200 pl-2 ml-1">
+                      {studentObj && (
+                        <button
+                          type="button"
+                          onClick={() => setBadgeStudent(studentObj)}
+                          className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                          title="Xem & in thẻ học sinh (Mã QR)"
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </button>
+                      )}
+
+                      {studentObj && (
+                        <a
+                          href={getZaloNoticeUrl(studentObj, recorded?.status)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-lg border border-slate-200 p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"
+                          title="Gửi tin nhắn Zalo thông báo cho phụ huynh"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
 
-      <p className="mt-4 text-xs text-gray-400">
-        Ngày trong tuần hiện tại: {WEEKDAY_LABELS[weekdayOf(date)]}. Điểm danh "Có mặt", "Vắng
-        không phép" hoặc "Học bù" sẽ tự động trừ 1 buổi trong gói của học sinh.
-      </p>
+      {/* Footer Info */}
+      <div className="rounded-xl bg-slate-100/80 p-3.5 text-xs text-slate-500 leading-relaxed border border-slate-200">
+        💡 <strong>Ghi chú:</strong> Điểm danh <strong>"Có mặt"</strong>, <strong>"Vắng không phép"</strong> hoặc <strong>"Học bù"</strong> sẽ tự động trừ 1 buổi trong gói theo cơ chế FIFO (ưu tiên gói mua trước). Quét mã QR sẽ tự động đánh dấu Có mặt ngay tức khắc!
+      </div>
+
+      {/* ================= MODAL: QUÉT MÃ QR ĐIỂM DANH ================= */}
+      <QRScannerModal
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={handleQRScan}
+      />
+
+      {/* ================= MODAL: THẺ HỌC SINH ĐIỆN TỬ ================= */}
+      <StudentCardModal
+        student={badgeStudent}
+        centerName={selectedCenter?.name}
+        orgName={organization?.name}
+        onClose={() => setBadgeStudent(null)}
+      />
     </div>
   )
 }

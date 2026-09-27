@@ -14,6 +14,7 @@ import { ReportsPage } from './pages/ReportsPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { StaffPage } from './pages/StaffPage'
 import { StudentsPage } from './pages/StudentsPage'
+import { PayrollPage } from './pages/PayrollPage'
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
 
             <Route element={<RequireRole roles={['owner', 'manager', 'teacher', 'ta']} />}>
               <Route path="attendance" element={<AttendancePage />} />
+              <Route path="payroll" element={<PayrollPage />} />
             </Route>
 
             <Route element={<RequireRole roles={['owner', 'manager']} />}>

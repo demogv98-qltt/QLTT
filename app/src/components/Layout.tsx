@@ -15,6 +15,7 @@ import {
   UserCog,
   PackageCheck,
   Wallet,
+  Banknote,
   BarChart3,
   ShieldCheck,
   MapPin,
@@ -194,6 +195,14 @@ export function Layout() {
             to="/attendance"
             icon={ClipboardCheck}
             label="Điểm danh"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+        {staff && (
+          <NavItem
+            to="/payroll"
+            icon={Banknote}
+            label={manage ? 'Bảng lương' : 'Thù lao cá nhân'}
             onClick={() => setMobileMenuOpen(false)}
           />
         )}

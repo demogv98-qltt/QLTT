@@ -29,6 +29,32 @@ interface AuthState {
   logout: () => Promise<void>
 }
 
+function formatAuthError(err: unknown, defaultMsg: string): string {
+  if (err && typeof err === 'object' && 'code' in err) {
+    const code = String((err as { code: string }).code)
+    switch (code) {
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+      case 'auth/user-not-found':
+        return 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại hoặc bấm "Quên mật khẩu".'
+      case 'auth/too-many-requests':
+        return 'Bạn đã thử đăng nhập sai quá nhiều lần. Vui lòng thử lại sau vài phút hoặc dùng chức năng Quên mật khẩu.'
+      case 'auth/invalid-email':
+        return 'Định dạng email không hợp lệ.'
+      case 'auth/email-already-in-use':
+        return 'Email này đã được sử dụng cho một tài khoản khác.'
+      case 'auth/weak-password':
+        return 'Mật khẩu quá yếu (cần tối thiểu 6 ký tự).'
+      case 'auth/network-request-failed':
+        return 'Không thể kết nối mạng. Vui lòng kiểm tra lại đường truyền internet.'
+      default:
+        break
+    }
+  }
+  if (err instanceof Error) return err.message
+  return defaultMsg
+}
+
 let profileUnsubscribe: (() => void) | null = null
 
 export const useAuthStore = create<AuthState>((set) => {
@@ -63,9 +89,9 @@ export const useAuthStore = create<AuthState>((set) => {
     login: async (email, password) => {
       set({ error: null })
       try {
-        await signInWithEmailAndPassword(auth, email, password)
+        await signInWithEmailAndPassword(auth, email.trim(), password)
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Đăng nhập thất bại' })
+        set({ error: formatAuthError(err, 'Đăng nhập thất bại') })
         throw err
       }
     },
@@ -128,16 +154,16 @@ export const useAuthStore = create<AuthState>((set) => {
           }
         }
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Đăng ký thất bại' })
+        set({ error: formatAuthError(err, 'Đăng ký thất bại') })
         throw err
       }
     },
     resetPassword: async (email) => {
       set({ error: null })
       try {
-        await sendPasswordResetEmail(auth, email)
+        await sendPasswordResetEmail(auth, email.trim())
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Gửi email thất bại' })
+        set({ error: formatAuthError(err, 'Gửi email thất bại') })
         throw err
       }
     },

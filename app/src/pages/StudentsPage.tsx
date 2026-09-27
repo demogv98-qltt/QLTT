@@ -5,6 +5,9 @@ import { studentAvatar } from '../lib/avatar'
 import { useCollection } from '../lib/useCollection'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
+import { useOrgStore } from '../stores/orgStore'
+import { StudentCardModal } from '../components/StudentCardModal'
+import { QrCode, MessageCircle } from 'lucide-react'
 import type { Student } from '../types'
 
 function parseBulkLine(line: string): { fullName: string; phone: string; parentPhone: string } | null {
@@ -16,7 +19,11 @@ function parseBulkLine(line: string): { fullName: string; phone: string; parentP
 
 export function StudentsPage() {
   const { profile } = useAuthStore()
-  const { selectedCenterId } = useCenterStore()
+  const { selectedCenterId, centers } = useCenterStore()
+  const { organization } = useOrgStore()
+  const selectedCenter = centers.find((c) => c.id === selectedCenterId)
+  const [badgeStudent, setBadgeStudent] = useState<Student | null>(null)
+
   const { data: students, loading } = useCollection<Student>(
     () =>
       selectedCenterId && profile
@@ -185,29 +192,58 @@ export function StudentsPage() {
               <th className="px-3 py-2">SĐT HS</th>
               <th className="px-3 py-2">SĐT PH</th>
               <th className="px-3 py-2">Trạng thái</th>
+              <th className="px-3 py-2 text-right">Thẻ & Zalo</th>
             </tr>
           </thead>
           <tbody>
-            {students.map((s) => (
-              <tr key={s.id} className="border-t border-gray-100">
-                <td className="px-3 py-2 font-medium text-gray-900">
-                  <span className="mr-2">{studentAvatar(s.id)}</span>
-                  {s.fullName}
-                </td>
-                <td className="px-3 py-2 text-gray-600">{s.phone || '-'}</td>
-                <td className="px-3 py-2 text-gray-600">{s.parentPhone || '-'}</td>
-                <td className="px-3 py-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${s.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                  >
-                    {s.active ? 'Đang học' : 'Ngừng học'}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {students.map((s) => {
+              const cleanPhone = (s.parentPhone || s.phone || '').replace(/\D/g, '')
+              return (
+                <tr key={s.id} className="border-t border-gray-100 hover:bg-slate-50/60 transition-colors">
+                  <td className="px-3 py-2 font-medium text-gray-900">
+                    <span className="mr-2">{studentAvatar(s.id)}</span>
+                    {s.fullName}
+                  </td>
+                  <td className="px-3 py-2 text-gray-600">{s.phone || '-'}</td>
+                  <td className="px-3 py-2 text-gray-600">{s.parentPhone || '-'}</td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${s.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    >
+                      {s.active ? 'Đang học' : 'Ngừng học'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setBadgeStudent(s)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors"
+                        title="Xem & in thẻ học sinh có mã QR"
+                      >
+                        <QrCode className="h-3.5 w-3.5" />
+                        Thẻ QR
+                      </button>
+
+                      {cleanPhone && (
+                        <a
+                          href={`https://zalo.me/${cleanPhone}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-lg border border-slate-200 p-1 text-blue-600 hover:bg-blue-50 transition-colors"
+                          title="Mở Zalo nhắn cho phụ huynh"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
             {students.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-4 text-center text-gray-400">
+                <td colSpan={5} className="px-3 py-4 text-center text-gray-400">
                   Chưa có học sinh nào.
                 </td>
               </tr>
@@ -215,6 +251,14 @@ export function StudentsPage() {
           </tbody>
         </table>
       )}
+
+      {/* Modal in thẻ học sinh */}
+      <StudentCardModal
+        student={badgeStudent}
+        centerName={selectedCenter?.name}
+        orgName={organization?.name}
+        onClose={() => setBadgeStudent(null)}
+      />
     </div>
   )
 }
