@@ -44,8 +44,12 @@ export function PayrollPage() {
 
   const selectedCenter = centers.find((c) => c.id === selectedCenterId)
 
-  // Staff of center
-  const { teachers, tas, loading: staffLoading } = useStaffOfCenter(profile?.orgId, selectedCenterId)
+  // Staff of center — only owner/manager may list org-wide users (firestore.rules); a
+  // teacher/TA viewing their own payroll below uses `profile` directly instead.
+  const { teachers, tas, loading: staffLoading } = useStaffOfCenter(
+    manage ? profile?.orgId : undefined,
+    selectedCenterId,
+  )
 
   // Classes of center
   const { data: classes } = useCollection<ClassGroup>(
@@ -106,14 +110,12 @@ export function PayrollPage() {
   const [selectedStaffForDetail, setSelectedStaffForDetail] = useState<StaffPayrollItem | null>(null)
   const [savingStaffId, setSavingStaffId] = useState<string | null>(null)
 
-  // Calculate payroll table
-  const allStaff = useMemo(() => [...teachers, ...tas], [teachers, tas])
-
+  // Calculate payroll table. Non-manage roles never ran the org-wide staff query above, so
+  // build their own single-person "staff list" straight from their own profile instead.
   const visibleStaff = useMemo(() => {
-    if (manage) return allStaff
-    // Teacher/TA only sees their own record
-    return allStaff.filter((u) => u.id === profile?.id)
-  }, [allStaff, manage, profile])
+    if (manage) return [...teachers, ...tas]
+    return profile ? [profile] : []
+  }, [teachers, tas, manage, profile])
 
   const payrollItems: StaffPayrollItem[] = useMemo(() => {
     return visibleStaff.map((staff) => {

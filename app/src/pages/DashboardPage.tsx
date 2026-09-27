@@ -99,23 +99,24 @@ export function DashboardPage() {
     [selectedCenterId, profile],
   )
 
-  // Query students
+  // Query students. firestore.rules only lets staff (not parent) list a center's students —
+  // skip the query for the parent role rather than let it fail with permission-denied.
   const { data: students } = useCollection<Student>(
     () =>
-      selectedCenterId && profile
+      selectedCenterId && profile && !isParent
         ? query(
             collection(db, 'students'),
             where('orgId', '==', profile.orgId),
             where('centerId', '==', selectedCenterId),
           )
         : null,
-    [selectedCenterId, profile],
+    [selectedCenterId, profile, isParent],
   )
 
-  // Query active enrollments
+  // Query active enrollments — same staff-only read rule as students above.
   const { data: activeEnrollments } = useCollection<Enrollment>(
     () =>
-      selectedCenterId && profile
+      selectedCenterId && profile && !isParent
         ? query(
             collection(db, 'enrollments'),
             where('orgId', '==', profile.orgId),
@@ -123,7 +124,7 @@ export function DashboardPage() {
             where('active', '==', true),
           )
         : null,
-    [selectedCenterId, profile],
+    [selectedCenterId, profile, isParent],
   )
 
   // Query payments ONLY for managers/owners (financial confidentiality)
@@ -141,10 +142,10 @@ export function DashboardPage() {
     [manage, selectedCenterId, profile, start, end],
   )
 
-  // Query attendance for the month
+  // Query attendance for the month — same staff-only read rule as students above.
   const { data: allMonthAttendance } = useCollection<Attendance>(
     () =>
-      selectedCenterId && profile
+      selectedCenterId && profile && !isParent
         ? query(
             collection(db, 'attendance'),
             where('orgId', '==', profile.orgId),
@@ -153,7 +154,7 @@ export function DashboardPage() {
             where('recordedAt', '<', Timestamp.fromDate(end)),
           )
         : null,
-    [selectedCenterId, profile, start, end],
+    [selectedCenterId, profile, isParent, start, end],
   )
 
   // Filter classes assigned to current teacher/TA

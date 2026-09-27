@@ -173,17 +173,24 @@ export function AttendancePage() {
   async function record(studentId: string, status: AttendanceStatus) {
     if (!sessionId || !classId || !selectedCenterId || !profile) return
     const ref = doc(db, 'attendance', `${sessionId}_${studentId}`)
-    await setDoc(ref, {
-      orgId: profile.orgId,
-      sessionId,
-      classId,
-      centerId: selectedCenterId,
-      studentId,
-      status,
-      creditApplied: false,
-      recordedBy: profile.id,
-      recordedAt: serverTimestamp(),
-    })
+    // merge: true + omitting creditApplied is deliberate: applyAttendanceCredit's transaction
+    // below is the sole owner of that field. A plain (non-merge) setDoc here would blindly
+    // reset creditApplied to false even when a concurrent call already committed true for the
+    // same doc, defeating the idempotency lock and causing a double session deduction.
+    await setDoc(
+      ref,
+      {
+        orgId: profile.orgId,
+        sessionId,
+        classId,
+        centerId: selectedCenterId,
+        studentId,
+        status,
+        recordedBy: profile.id,
+        recordedAt: serverTimestamp(),
+      },
+      { merge: true },
+    )
     // Apply FIFO credit deduction directly
     await applyAttendanceCredit(db, ref, ref.id, {
       orgId: profile.orgId,
@@ -208,6 +215,21 @@ export function AttendancePage() {
         success: false,
         studentName: student.fullName,
         message: 'Ca học chưa sẵn sàng. Vui lòng chọn lớp trước khi quét mã.',
+      }
+    }
+    if (!roster.includes(student.id)) {
+      return {
+        success: false,
+        studentName: student.fullName,
+        message: 'Học sinh chưa có gói buổi học còn hiệu lực cho lớp này.',
+      }
+    }
+    const existing = attendanceByStudent[student.id]
+    if (existing) {
+      return {
+        success: false,
+        studentName: student.fullName,
+        message: `Học sinh đã được điểm danh trước đó: ${STATUS_LABELS[existing.status]}.`,
       }
     }
     await record(student.id, 'present')

@@ -44,13 +44,17 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
 
   const studentCenter = centers.find((c) => c.id === student?.centerId)
 
-  // Fetch enrollments of this student
+  // Fetch enrollments of this student. centerId must be in the filter alongside orgId —
+  // firestore.rules' read rule for enrollments/payments/attendance also checks
+  // resource.data.centerId, and a list query is only allowed when every field the rule reads
+  // is also constrained by the query itself (see AGENTS.md).
   const { data: enrollments, loading: enrollmentsLoading } = useCollection<Enrollment>(
     () =>
       student && profile
         ? query(
             collection(db, 'enrollments'),
             where('orgId', '==', profile.orgId),
+            where('centerId', '==', student.centerId),
             where('studentId', '==', student.id),
           )
         : null,
@@ -64,6 +68,7 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
         ? query(
             collection(db, 'payments'),
             where('orgId', '==', profile.orgId),
+            where('centerId', '==', student.centerId),
             where('studentId', '==', student.id),
           )
         : null,
@@ -77,6 +82,7 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
         ? query(
             collection(db, 'attendance'),
             where('orgId', '==', profile.orgId),
+            where('centerId', '==', student.centerId),
             where('studentId', '==', student.id),
           )
         : null,

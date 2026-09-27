@@ -17,8 +17,10 @@ export function ClassesPage() {
   const { profile } = useAuthStore()
   const { selectedCenterId } = useCenterStore()
   const [activeTab, setActiveTab] = useState<'classes' | 'matrix'>('classes')
-  const { teachers, tas } = useStaffOfCenter(profile?.orgId, selectedCenterId)
   const manage = canManage(profile?.role)
+  // Only owner/manager may list org-wide users (firestore.rules) — teachers/TAs/parents hit
+  // /classes too, but only manage's create form needs this list, so skip the query otherwise.
+  const { teachers, tas } = useStaffOfCenter(manage ? profile?.orgId : undefined, selectedCenterId)
 
   const { data: classes, loading } = useCollection<ClassGroup>(
     () =>
@@ -94,21 +96,25 @@ export function ClassesPage() {
           <span>Danh sách lớp theo cơ sở</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('matrix')}
-          className={`flex items-center gap-2 py-3 px-5 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
-            activeTab === 'matrix'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-900'
-          }`}
-        >
-          <Building2 className="h-4 w-4" />
-          <span>Ma trận lịch dạy 3 cơ sở (Toàn hệ thống)</span>
-        </button>
+        {manage && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('matrix')}
+            className={`flex items-center gap-2 py-3 px-5 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+              activeTab === 'matrix'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            <span>Ma trận lịch dạy 3 cơ sở (Toàn hệ thống)</span>
+          </button>
+        )}
       </div>
 
-      {activeTab === 'matrix' ? (
+      {/* CrossCenterScheduleMatrix queries org-wide users (owner/manager only per
+          firestore.rules) — only reachable when the tab above is rendered. */}
+      {activeTab === 'matrix' && manage ? (
         <CrossCenterScheduleMatrix />
       ) : (
         <div className="max-w-3xl">
