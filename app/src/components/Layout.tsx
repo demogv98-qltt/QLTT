@@ -6,6 +6,7 @@ import { useOrgStore } from '../stores/orgStore'
 import { SUPER_ADMIN_EMAIL } from '../lib/superAdmin'
 import { ROLE_LABELS, canManage, isStaffRole } from '../lib/roles'
 import { Logo } from './Logo'
+import { InstallAppBanner } from './InstallAppBanner'
 import {
   LayoutDashboard,
   BookOpen,
@@ -378,6 +379,9 @@ export function Layout() {
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col min-w-0">
+        {/* PWA Mobile Install Banner */}
+        <InstallAppBanner />
+
         {/* Top Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 sm:px-6 backdrop-blur-xs">
           {/* Left section: Hamburger (Mobile) + Branch Selector */}
