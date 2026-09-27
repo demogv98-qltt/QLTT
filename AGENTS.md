@@ -1,80 +1,123 @@
-# AGENTS.md — Ghi chú vận hành & Quy ước phát triển dự án QLTT
+# Ghi chú cho AI agent làm việc trên dự án này
 
-Tài liệu này dành cho AI Agent và các lập trình viên tham gia phát triển dự án QLTT (Quản lý Trung tâm Dạy thêm - SaaS đa khách hàng).
+Tài liệu này dành cho AI (Antigravity, Claude Code, Copilot, ...) — không phải
+tài liệu người dùng cuối. Đọc file này trước khi bắt đầu bất kỳ việc gì. Kiến
+trúc/tính năng chi tiết xem `README.MD`; file này chỉ ghi những gì một agent
+mới cần biết mà README không nói tới: người dùng là ai, quy trình test/deploy
+thực tế, và các "bẫy" đã từng gặp phải.
 
----
+## Người dùng là ai
 
-## 1. Hồ sơ người dùng & Nguyên tắc tương tác
-- **Người dùng:** Chủ trung tâm / Thầy quản lý trung tâm, **không chuyên về kỹ thuật lập trình**.
-- **Môi trường thao tác:** Windows Command Prompt (`cmd.exe`) hoặc PowerShell.
-- **Nguyên tắc hướng dẫn:**
-  - Hướng dẫn rõ ràng, chi tiết, từng bước một.
-  - Các lệnh đưa ra phải copy-paste chạy được ngay trên Windows cmd/PowerShell.
-  - Tránh các lệnh chỉ chạy được trên Linux/macOS (ví dụ: không dùng `export VAR=...`, `cat`, `rm -rf`, `grep` trừ khi chạy trong git bash hoặc giải thích rõ).
+Chủ trung tâm dạy Vật lý ("thầy"), **không rành kỹ thuật**. Thao tác trên
+Windows, dùng `cmd.exe`, copy-paste từng lệnh một — không tự debug được nếu
+lệnh lỗi. Khi cần thầy chạy lệnh:
+- Luôn ghi lệnh copy-paste được, từng bước một, không gộp nhiều bước phức tạp
+  vào một câu giải thích.
+- Không giả định thầy biết các khái niệm terminal cơ bản (đường dẫn, biến môi
+  trường, v.v.) — giải thích ngắn gọn nếu cần thầy tự thao tác (VD: mở Notepad,
+  Save As).
+- Toàn bộ giao tiếp bằng tiếng Việt.
+- Dự án này được bán cho nhiều giáo viên khác dùng (SaaS) — xem phần "Vận hành
+  SaaS" trong README.MD.
 
----
+## Repo & branch
 
-## 2. Quy trình thử nghiệm (Test) bằng Firebase Emulator trước khi Deploy thật
-Dự án được thiết kế để phát triển và test hoàn chỉnh cục bộ mà không cần đụng đến dữ liệu Firebase thật trên đám mây.
+- Remote: `demogv98-qltt/QLTT` (GitHub). Nhánh chính: `main`.
+- Thầy thao tác trên máy Windows tại `C:\Users\THVL\QLTT`, luôn `git pull` từ
+  `main` trước khi deploy. Nếu agent làm việc trên nhánh riêng, **nhớ merge
+  vào `main` và bảo thầy `git pull` lại** — nếu không thầy sẽ deploy nhầm bản
+  cũ và không hiểu vì sao code mới "không có tác dụng".
 
-1. **Cài đặt thư viện (nếu mới clone hoặc thêm package):**
-   ```cmd
-   npm install
-   npm --prefix app install
-   ```
+## Firebase project thật
 
-2. **Khởi động Firebase Emulator (Auth + Firestore):**
-   ```cmd
-   npm run emulators
-   ```
-   - Giao diện quản lý Emulator UI: `http://127.0.0.1:4000`
-   - Dữ liệu ở đây hoàn toàn độc lập, không sợ làm hỏng dữ liệu thật.
+- Project ID: `qltt-tlm`. Config đã ghi ở `.firebaserc` (default project) —
+  không cần `firebase use` thủ công nữa.
+- Gói **Spark (miễn phí)** — cố tình không dùng Cloud Functions (xem README).
+  Đừng thêm Cloud Functions/Cloud Run trừ khi thầy đồng ý đổi sang gói Blaze.
+- `app/.env` **không nằm trong git** (đã có `app/.gitignore`), chỉ tồn tại
+  trên máy thầy. Nếu agent chạy trong sandbox/CI không có file này, phải tự
+  tạo tạm từ `app/.env.example` trước khi build.
+- Deploy: `firebase deploy --only firestore:rules,firestore:indexes,hosting`
+  (chỉ deploy phần đã đổi để đỡ chờ, VD chỉ đổi UI thì `--only hosting`).
+- **Lỗi từng gặp**: `firebase deploy` báo "No currently active project" hoặc
+  "Failed to get Firebase project qltt-tlm... permission" — không phải lỗi
+  code. Nguyên nhân thường là phiên đăng nhập Firebase CLI trên máy thầy hết
+  hạn hoặc sai tài khoản Google. Cách xử lý: `firebase login --reauth`, chọn
+  đúng tài khoản Google đã tạo project trên Firebase Console.
 
-3. **Chạy giao diện Web (Frontend Vite):**
-   Mở cửa sổ dòng lệnh thứ hai:
-   ```cmd
-   npm --prefix app run dev
-   ```
-   - Truy cập: `http://localhost:5173`
-   - Trong file `app/.env`, mặc định `VITE_USE_FIREBASE_EMULATOR=true`.
+## Cách test trước khi bảo thầy deploy
 
----
+**Luôn tự test bằng Firestore Emulator trước khi yêu cầu thầy deploy lên
+production** — thầy không tự debug được nếu deploy nhầm.
 
-## 3. Quy trình Deploy lên Firebase Production (`qltt-tlm`)
-- **Project ID:** `qltt-tlm`
-- **Gói cước:** Spark (Miễn phí 100% của Google Firebase).
-- **Quy tắc vàng:** **TUYỆT ĐỐI KHÔNG DÙNG CLOUD FUNCTIONS** để không bị chuyển sang gói trả phí Blaze (cần thẻ tín dụng quốc tế). Toàn bộ logic chạy ở React Client và được bảo vệ nghiêm ngặt bằng Firestore Security Rules.
+1. `firebase.json` đã cấu hình sẵn emulator (Auth :9099, Firestore :8080, UI
+   :4000). Chạy: `npx firebase-tools emulators:start --only firestore,auth`
+   (dùng `npx` vì môi trường sandbox có thể không có `firebase-tools` cài
+   sẵn — nó sẽ tự tải bản mới nhất).
+2. Đổi tạm `app/.env`: `VITE_USE_FIREBASE_EMULATOR=true`, `VITE_FIREBASE_PROJECT_ID=qltt-dev`
+   (project id không quan trọng khi chạy emulator, chỉ cần khớp giữa `.env`
+   và lệnh emulator/seed script). **Nhớ backup `.env` gốc trước và khôi phục
+   lại sau khi test xong** — nếu quên, lần build/deploy tiếp theo sẽ vô tình
+   build vào project demo thay vì `qltt-tlm`.
+3. Để dựng dữ liệu mẫu nhanh (org/user/enrollment/payment/attendance...) mà
+   không phải click tay qua UI, cài tạm `firebase-admin` (KHÔNG lưu vào
+   `package.json`: `npm install firebase-admin --no-save --no-package-lock`
+   trong `app/`), viết script Node dùng Admin SDK (bỏ qua rules — chỉ dùng để
+   seed dữ liệu, không dùng để test rules) trỏ vào
+   `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` /
+   `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Chạy bằng `npx tsx script.mts`
+   (tsx tự tải qua npx, không cần cài). **Gỡ `firebase-admin` lại
+   (`npm uninstall firebase-admin --no-save`) sau khi xong** — nó không phải
+   dependency thật của app.
+4. Để test đúng **Firestore Rules** (không phải chỉ test logic), phải test
+   qua Client SDK (`firebase/firestore`) đã đăng nhập bằng tài khoản
+   Auth thật (`signInWithEmailAndPassword` qua Auth emulator), không phải
+   Admin SDK — Admin SDK luôn bỏ qua rules nên không phát hiện được lỗi phân
+   quyền.
+5. Sau khi test xong: tắt emulator (`lsof -ti:8080,9099 -sTCP:LISTEN | xargs
+   kill`), xoá script test tạm, gỡ `firebase-admin`, khôi phục `.env`, rồi mới
+   `npm run build` thật để xác nhận build production sạch trước khi bảo thầy
+   deploy.
 
-**Các bước deploy chuẩn:**
-1. Đảm bảo file `app/.env` trỏ đúng Firebase Production (`VITE_USE_FIREBASE_EMULATOR=false` và các khóa API thật).
-2. Build ứng dụng frontend:
-   ```cmd
-   npm --prefix app run build
-   ```
-3. Deploy Firestore Rules, Indexes và Hosting:
-   ```cmd
-   npx firebase deploy --only firestore:rules,firestore:indexes,hosting --project qltt-tlm
-   ```
+### Bẫy khi test transaction/concurrency trên emulator
 
-**Các lỗi thường gặp và cách xử lý:**
-- *Lỗi build TypeScript (`tsc -b` báo lỗi types):* Luôn kiểm tra `npm --prefix app run build` ở local trước khi deploy. Sửa hết các lỗi kiểu dữ liệu trước.
-- *Lỗi Firestore Index:* Nếu console trình duyệt báo query cần index, bấm vào link tạo index trong log Firebase hoặc khai báo vào file `firestore.indexes.json` rồi deploy lại indexes.
-- *Lỗi Permission Denied:* Luôn kiểm tra xem document tạo mới/cập nhật có đầy đủ `orgId`, `centerId` theo đúng điều kiện của `firestore.rules`.
+Emulator Firestore đôi khi trả `PERMISSION_DENIED` (không phải `ABORTED`) cho
+transaction thua trong một race điều kiện thật (hai transaction cùng sửa một
+document), ngay cả khi rule + logic đã đúng — đây là hạn chế của bản thân
+emulator, không phải bug code. Do đó code xử lý race (VD
+`app/src/lib/creditDeduction.ts`) nên tự phòng thủ: sau khi transaction lỗi,
+đọc lại document để xác nhận "có phải đối thủ đã thắng rồi" trước khi coi đó
+là lỗi thật — xem comment trong file đó để hiểu rõ pattern.
 
----
+## Quy ước code trong dự án này
 
-## 4. Quy ước Code & Bảo mật dữ liệu (Data Conventions & Security)
-1. **Kiến trúc Multi-tenant (Mỗi trung tâm = 1 Organization):**
-   - **Tất cả các collection** (`centers`, `students`, `classes`, `classSessions`, `enrollments`, `attendance`, `payments`, `creditLedger`, `teacherAttendance`, v.v.) **BẮT BUỘC PHẢI CÓ FIELD `orgId`**.
-   - Mọi truy vấn Firestore (`where(...)`) phải lọc theo `orgId == profile.orgId`.
-   - Mọi rule trong `firestore.rules` phải kiểm tra: `resource.data.orgId == myOrgId()`.
-2. **Quy ước phân quyền vai trò (Roles):**
-   - `owner`: Chủ trung tâm (toàn quyền trong tổ chức, xem báo cáo doanh thu, cài đặt, tạo cơ sở, xóa học sinh).
-   - `manager`: Quản lý trung tâm (quản lý học sinh, lớp học, thu học phí, điểm danh, gói buổi học).
-   - `teacher`: Giáo viên (xem lịch dạy, điểm danh lớp, xem danh sách học sinh lớp mình). **Không xem doanh thu, báo cáo tài chính hay thông tin nội bộ của trung tâm khác**.
-   - `ta`: Trợ giảng (hỗ trợ điểm danh, điểm danh bù, hỗ trợ lớp học). **Không xem doanh thu**.
-   - `parent`: Học sinh / Phụ huynh (chỉ xem tiến độ và lịch học của con mình).
-   - `super_admin`: Tài khoản quản trị nền tảng SaaS (`haunn.vietanhschool@gmail.com`) kích hoạt/tạm khóa các trung tâm.
-3. **Logic trừ buổi học tự động (Credit Deduction):**
-   - Chạy theo cơ chế FIFO (gói mua trước, còn hạn dùng trừ trước).
-   - Đã được khóa an toàn trong `firestore.rules`: giáo viên/trợ giảng chỉ được phép cập nhật đúng 3 field (`usedSessions`, `remainingSessions`, `active`) và số lượng tăng đúng 1 buổi.
+- Toàn bộ UI text bằng tiếng Việt (không mix tiếng Anh trừ tên biến/field).
+- Mọi collection Firestore đều có field `orgId`; mọi rule đọc/ghi trong
+  `firestore.rules` đều kiểm tra `orgId` khớp — khi thêm collection/field mới,
+  **luôn** thêm field `orgId` và rule kiểm tra tương ứng, đừng chỉ dựa vào
+  `centerId`/`centerIds`.
+- Khi thêm một field Firestore có thể bị client tự ý sửa giá trị (không chỉ
+  tên field) — như bài học từ vụ vá `enrollments.usedSessions` — rule phải
+  ràng buộc **giá trị** (VD `request.resource.data.x == resource.data.x + 1`),
+  không chỉ ràng buộc `affectedKeys()`.
+- Query Firestore nhiều field: rule chỉ chấp nhận list-query nếu **mọi field
+  rule đọc** cũng nằm trong filter của chính query đó (thường phải thêm cả
+  `orgId` lẫn `centerId` vào `where()`, không chỉ field đang thật sự cần lọc).
+- Composite index: `firestore.indexes.json` — khi thêm query mới có
+  range/orderBy, kiểm tra index đã đủ chưa trước khi test (Firestore sẽ báo
+  lỗi kèm link tạo index nếu thiếu, nhưng agent chạy trong sandbox không mở
+  được link đó — phải tự thêm vào `firestore.indexes.json`).
+- Trước khi coi một trang là xong: `npx tsc -b --noEmit` (typecheck) rồi
+  `npm run build` (trong `app/`) phải sạch, không chỉ dựa vào việc code "nhìn
+  có vẻ đúng".
+- Dùng skill dataviz (nếu công cụ AI có hỗ trợ) trước khi vẽ biểu đồ mới — màu
+  đã dùng trong app: trạng thái điểm danh (present/makeup/excused/unexcused)
+  có bảng màu cố định trong `DashboardPage.tsx`, doanh thu dùng 1 màu indigo
+  (`#4f46e5`, đã validate qua script của skill) — giữ nhất quán, đừng bịa màu
+  mới cho cùng loại dữ liệu.
+
+## Việc tồn đọng (theo thứ tự ưu tiên thầy từng chọn)
+
+Xem mục "Trạng thái hiện tại" trong `README.MD`. Việc kế tiếp thầy có thể yêu
+cầu: mã học sinh ngắn + QR VietQR cho thanh toán (đã có trong backlog, chưa
+làm — thầy đã ưu tiên các việc khác trước).
