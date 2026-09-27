@@ -21,6 +21,7 @@ import { useOrgStore } from '../stores/orgStore'
 import { canManage } from '../lib/roles'
 import { QRScannerModal } from '../components/QRScannerModal'
 import { StudentCardModal } from '../components/StudentCardModal'
+import { StudentDetailModal } from '../components/StudentDetailModal'
 import { Camera, QrCode, MessageCircle, Clock, CalendarDays, CheckCircle2 } from 'lucide-react'
 import type { Attendance, AttendanceStatus, ClassGroup, Enrollment, Student } from '../types'
 
@@ -76,6 +77,7 @@ export function AttendancePage() {
   // QR scanner & student card modals
   const [showScanner, setShowScanner] = useState(false)
   const [badgeStudent, setBadgeStudent] = useState<Student | null>(null)
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null)
 
   useEffect(() => {
     if (paramClassId) {
@@ -339,11 +341,23 @@ export function AttendancePage() {
                 >
                   {/* Student Info */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-2xl shrink-0">{studentAvatar(studentId)}</span>
+                    <button
+                      type="button"
+                      onClick={() => studentObj && setDetailStudent(studentObj)}
+                      className="text-2xl shrink-0 hover:scale-110 transition-transform"
+                      title="Xem hồ sơ 360° học sinh"
+                    >
+                      {studentAvatar(studentId)}
+                    </button>
                     <div className="min-w-0">
-                      <p className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                      <button
+                        type="button"
+                        onClick={() => studentObj && setDetailStudent(studentObj)}
+                        className="font-bold text-slate-900 text-sm sm:text-base truncate text-left hover:text-indigo-600 hover:underline block"
+                        title="Bấm để xem toàn diện hồ sơ học sinh (tiến độ, chuyên cần, công nợ)"
+                      >
                         {studentObj?.fullName ?? studentId}
-                      </p>
+                      </button>
                       <p className="text-xs text-slate-400 truncate">
                         PH: {studentObj?.parentPhone || studentObj?.phone || 'Chưa cập nhật SĐT'}
                       </p>
@@ -424,6 +438,12 @@ export function AttendancePage() {
         centerName={selectedCenter?.name}
         orgName={organization?.name}
         onClose={() => setBadgeStudent(null)}
+      />
+
+      {/* ================= MODAL: HỒ SƠ 360° HỌC SINH ================= */}
+      <StudentDetailModal
+        student={detailStudent}
+        onClose={() => setDetailStudent(null)}
       />
     </div>
   )

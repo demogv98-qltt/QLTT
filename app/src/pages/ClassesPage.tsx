@@ -7,6 +7,8 @@ import { WEEKDAY_LABELS } from '../lib/schedule'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
 import { canManage } from '../lib/roles'
+import { CrossCenterScheduleMatrix } from '../components/CrossCenterScheduleMatrix'
+import { BookOpen, Building2 } from 'lucide-react'
 import type { ClassGroup, RecurringSlot, Weekday } from '../types'
 
 const ALL_WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6]
@@ -14,6 +16,7 @@ const ALL_WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6]
 export function ClassesPage() {
   const { profile } = useAuthStore()
   const { selectedCenterId } = useCenterStore()
+  const [activeTab, setActiveTab] = useState<'classes' | 'matrix'>('classes')
   const { teachers, tas } = useStaffOfCenter(profile?.orgId, selectedCenterId)
   const manage = canManage(profile?.role)
 
@@ -75,8 +78,41 @@ export function ClassesPage() {
   }
 
   return (
-    <div className="max-w-3xl">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">Lớp / Ca học</h2>
+    <div className="space-y-6">
+      {/* Tab Navigation */}
+      <div className="flex border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('classes')}
+          className={`flex items-center gap-2 py-3 px-5 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+            activeTab === 'classes'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <BookOpen className="h-4 w-4" />
+          <span>Danh sách lớp theo cơ sở</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('matrix')}
+          className={`flex items-center gap-2 py-3 px-5 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+            activeTab === 'matrix'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Building2 className="h-4 w-4" />
+          <span>Ma trận lịch dạy 3 cơ sở (Toàn hệ thống)</span>
+        </button>
+      </div>
+
+      {activeTab === 'matrix' ? (
+        <CrossCenterScheduleMatrix />
+      ) : (
+        <div className="max-w-3xl">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">Lớp / Ca học</h2>
 
       {manage && (
         <form onSubmit={handleCreate} className="mb-6 space-y-3 rounded-lg border border-gray-200 bg-white p-4">
@@ -209,6 +245,8 @@ export function ClassesPage() {
           ))}
           {classes.length === 0 && <p className="text-sm text-gray-500">Chưa có lớp nào.</p>}
         </ul>
+      )}
+        </div>
       )}
     </div>
   )

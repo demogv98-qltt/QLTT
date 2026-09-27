@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Plus,
   Users,
+  Building2,
 } from 'lucide-react'
 import type { Attendance, AttendanceStatus, ClassGroup, Enrollment, Payment, Student, Weekday } from '../types'
 
@@ -302,7 +303,7 @@ export function DashboardPage() {
             <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
               Tác vụ nhanh cho quản lý
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <Link
                 to="/students"
                 className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors"
@@ -341,6 +342,16 @@ export function DashboardPage() {
                   <ClipboardCheck className="h-4 w-4" />
                 </div>
                 <span>Điểm danh hôm nay</span>
+              </Link>
+
+              <Link
+                to="/classes"
+                className="flex items-center gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 text-xs sm:text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                <span>Lịch dạy 3 cơ sở</span>
               </Link>
             </div>
           </div>

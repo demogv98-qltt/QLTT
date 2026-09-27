@@ -7,7 +7,8 @@ import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
 import { useOrgStore } from '../stores/orgStore'
 import { StudentCardModal } from '../components/StudentCardModal'
-import { QrCode, MessageCircle } from 'lucide-react'
+import { StudentDetailModal } from '../components/StudentDetailModal'
+import { QrCode, MessageCircle, User } from 'lucide-react'
 import type { Student } from '../types'
 
 function parseBulkLine(line: string): { fullName: string; phone: string; parentPhone: string } | null {
@@ -23,6 +24,7 @@ export function StudentsPage() {
   const { organization } = useOrgStore()
   const selectedCenter = centers.find((c) => c.id === selectedCenterId)
   const [badgeStudent, setBadgeStudent] = useState<Student | null>(null)
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null)
 
   const { data: students, loading } = useCollection<Student>(
     () =>
@@ -201,8 +203,15 @@ export function StudentsPage() {
               return (
                 <tr key={s.id} className="border-t border-gray-100 hover:bg-slate-50/60 transition-colors">
                   <td className="px-3 py-2 font-medium text-gray-900">
-                    <span className="mr-2">{studentAvatar(s.id)}</span>
-                    {s.fullName}
+                    <button
+                      type="button"
+                      onClick={() => setDetailStudent(s)}
+                      className="group flex items-center text-left hover:text-indigo-600 transition-colors"
+                      title="Bấm để xem toàn diện hồ sơ học sinh (tiến độ, chuyên cần, công nợ)"
+                    >
+                      <span className="mr-2">{studentAvatar(s.id)}</span>
+                      <span className="group-hover:underline font-semibold">{s.fullName}</span>
+                    </button>
                   </td>
                   <td className="px-3 py-2 text-gray-600">{s.phone || '-'}</td>
                   <td className="px-3 py-2 text-gray-600">{s.parentPhone || '-'}</td>
@@ -215,6 +224,16 @@ export function StudentsPage() {
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setDetailStudent(s)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                        title="Xem hồ sơ 360° học sinh"
+                      >
+                        <User className="h-3.5 w-3.5 text-slate-500" />
+                        Hồ sơ
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => setBadgeStudent(s)}
@@ -258,6 +277,12 @@ export function StudentsPage() {
         centerName={selectedCenter?.name}
         orgName={organization?.name}
         onClose={() => setBadgeStudent(null)}
+      />
+
+      {/* Modal chi tiết hồ sơ 360° */}
+      <StudentDetailModal
+        student={detailStudent}
+        onClose={() => setDetailStudent(null)}
       />
     </div>
   )
