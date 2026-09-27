@@ -107,28 +107,52 @@ không cần thẻ ngân hàng.
    npx firebase deploy --only firestore:rules,firestore:indexes,hosting --project <project-id>
    ```
 
-## Trạng thái hiện tại (MVP — Giai đoạn 1 theo quy hoạch)
+## Trạng thái hiện tại
 
 Đã có:
 - Kiến trúc SaaS đa khách hàng: mỗi trung tâm đăng ký là một tổ chức tách biệt,
   quản lý nhiều cơ sở
-- Quản lý cơ sở / học sinh / lớp (ca học lặp lại hàng tuần) / nhân sự
+- Quản lý cơ sở / học sinh (kể cả nhập danh sách đồng loạt) / lớp (ca học lặp
+  lại hàng tuần) / nhân sự
 - Điểm danh theo buổi thực tế + tự động trừ 1 buổi trong gói (FIFO theo ngày
-  mua, ưu tiên gói còn hạn dùng), cảnh báo "sắp hết buổi" ở trang Gói buổi học
-  và Dashboard
+  mua, ưu tiên gói còn hạn dùng), khóa chống trừ lặp khi bấm 2 lần
 - Bán gói buổi học (session-pack) và gói tháng, ghi nhận thanh toán thủ công +
   tổng hợp công nợ theo học sinh
 - Phân quyền theo vai trò (Owner/Manager/TA/Teacher/Parent) qua Firestore
   Security Rules, scoping theo tổ chức + cơ sở
+- Dashboard: số liệu tháng + biểu đồ điểm danh theo ngày
+- **Báo cáo thống kê**: doanh thu 6 tháng, doanh thu theo hình thức/theo lớp,
+  công nợ chi tiết toàn bộ học sinh (xuất CSV)
+- **Trang quản trị (Super Admin)**: kích hoạt/khóa thủ công từng tổ chức
+  (trial/active/suspended) — xem "Vận hành SaaS" bên dưới
+- Quên mật khẩu (Firebase Auth built-in)
 
-Chưa làm (Giai đoạn 2-4 theo quy hoạch, chưa trong phạm vi hiện tại):
-- Bảng lương tự động theo điểm danh, báo cáo tháng tổng hợp nhiều cơ sở, xuất
-  PDF/Excel tự động
-- Cổng xem riêng cho Học sinh/Phụ huynh (hiện tại role `parent` đã có trong
-  data model + rules nhưng chưa có giao diện)
+Chưa làm:
+- Mã học sinh ngắn (VD: HS0123) + QR VietQR để phụ huynh chuyển khoản
+- Đối soát tự động qua webhook ngân hàng (SePay) — cần thêm backend nhỏ, xung
+  đột với quyết định "không cần server, giữ gói Spark miễn phí" hiện tại, cần
+  bàn với chủ trung tâm trước khi làm
+- Thông báo Zalo ZNS cho phụ huynh
+- Bảng lương tự động theo điểm danh
+- Cổng xem riêng cho Học sinh/Phụ huynh (role `parent` đã có trong data model
+  + rules nhưng chưa có giao diện riêng)
 - App/PWA điểm danh riêng cho GV/trợ giảng
 - Thu phí/thanh toán từ giáo viên mua phần mềm (hiện tại tạo tổ chức mới là
-  miễn phí, không có luồng billing)
+  miễn phí; kích hoạt/khóa đang làm thủ công qua trang Quản trị)
+
+## Vận hành SaaS (Super Admin)
+
+- Tài khoản admin duy nhất, nhận diện bằng **email cố định** (không phải
+  Firestore role) — xem `app/src/lib/superAdmin.ts` (`SUPER_ADMIN_EMAIL`) và
+  hàm `isSuperAdmin()` trong `firestore.rules` — **sửa cả 2 chỗ cùng lúc** nếu
+  cần đổi email admin.
+- Đăng nhập bằng email đó → thấy mục **Quản trị** ở menu, xem danh sách mọi tổ
+  chức, bấm Kích hoạt/Khóa/Về dùng thử. Đây là cách duy nhất chuyển tổ chức từ
+  `trial` sang `active` (owner/manager của chính tổ chức đó không tự làm được
+  — rule chặn ở `firestore.rules`).
+- Route `/admin` cố tình nằm **ngoài** `<Layout>` trong `App.tsx` để Super
+  Admin không tự khóa mất quyền truy cập nếu tổ chức của chính họ (nếu có) bị
+  suspended.
 
 ### Giới hạn đã biết
 
