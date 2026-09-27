@@ -214,6 +214,22 @@ export function DashboardPage() {
   const maxDayTotal = Math.max(1, ...byDay.map((d) => d.total))
   const [hoverDay, setHoverDay] = useState<number | null>(null)
 
+  // Parent accounts never have a centerId (they're scoped by studentIds instead — see
+  // authStore.ts) so this must be checked before the "no center assigned" guard below, or
+  // every parent would be stuck on that message and never see their own welcome screen.
+  if (isParent) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xs">
+        <Users className="mx-auto h-12 w-12 text-indigo-600 mb-3" />
+        <h3 className="text-lg font-bold text-slate-900">Cổng thông tin Học sinh / Phụ huynh</h3>
+        <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
+          Chào mừng Quý phụ huynh và các em học sinh. Vui lòng liên hệ trung tâm để được cập
+          nhật tài khoản xem chi tiết tiến độ học tập và buổi học của con.
+        </p>
+      </div>
+    )
+  }
+
   if (!selectedCenterId) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xs">
@@ -463,17 +479,6 @@ export function DashboardPage() {
             )}
           </div>
         </>
-      )}
-
-      {/* ===================== VIEW 3: PHỤ HUYNH / HỌC SINH (PARENT VIEW) ===================== */}
-      {isParent && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xs">
-          <Users className="mx-auto h-12 w-12 text-indigo-600 mb-3" />
-          <h3 className="text-lg font-bold text-slate-900">Cổng thông tin Học sinh / Phụ huynh</h3>
-          <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-            Chào mừng Quý phụ huynh và các em học sinh. Vui lòng liên hệ trung tâm để được cập nhật tài khoản xem chi tiết tiến độ học tập và buổi học của con.
-          </p>
-        </div>
       )}
 
       {/* ===================== SHARED SECTION: BIỂU ĐỒ ĐIỂM DANH THEO THÁNG ===================== */}
