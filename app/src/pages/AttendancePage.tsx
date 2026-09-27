@@ -9,6 +9,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { db } from '../lib/firebase'
 import { studentAvatar } from '../lib/avatar'
 import { applyAttendanceCredit } from '../lib/creditDeduction'
@@ -56,14 +57,22 @@ export function AttendancePage() {
     return allClasses.filter((c) => c.teacherId === profile.id || c.taIds?.includes(profile.id))
   }, [allClasses, manage, profile])
 
-  const [date, setDate] = useState(todayISODate())
-  const [classId, setClassId] = useState('')
+  const [searchParams] = useSearchParams()
+  const paramDate = searchParams.get('date')
+  const paramClassId = searchParams.get('classId')
+
+  const [date, setDate] = useState(() => paramDate || todayISODate())
+  const [classId, setClassId] = useState(() => paramClassId || '')
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [creatingSession, setCreatingSession] = useState(false)
 
   useEffect(() => {
-    if (classes.length > 0 && !classId) setClassId(classes[0].id)
-  }, [classes, classId])
+    if (paramClassId) {
+      setClassId(paramClassId)
+    } else if (classes.length > 0 && !classId) {
+      setClassId(classes[0].id)
+    }
+  }, [classes, classId, paramClassId])
 
   const selectedClass = classes.find((c) => c.id === classId) ?? null
   const todaysSlot = selectedClass?.schedule.find((s) => s.weekday === weekdayOf(date))
