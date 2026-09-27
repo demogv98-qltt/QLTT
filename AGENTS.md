@@ -27,6 +27,20 @@ lệnh lỗi. Khi cần thầy chạy lệnh:
   `main` trước khi deploy. Nếu agent làm việc trên nhánh riêng, **nhớ merge
   vào `main` và bảo thầy `git pull` lại** — nếu không thầy sẽ deploy nhầm bản
   cũ và không hiểu vì sao code mới "không có tác dụng".
+- **Luôn `git pull origin main` NGAY TRƯỚC khi bắt đầu sửa code**, không chỉ
+  trước khi deploy — kể cả khi mới mở lại dự án sau một thời gian, hoặc khi
+  chưa chắc máy đang đứng ở nhánh nào (`git branch` để kiểm tra: nếu không
+  phải `main`, hỏi lại thầy trước khi sửa). Dự án này có nhiều công cụ AI
+  cùng làm việc (Antigravity, Claude Code, ...) trên cùng 1 máy/cùng 1 repo
+  nhưng không tự động biết công cụ kia vừa đổi gì — nếu agent nào đó sửa code
+  từ một bản cũ, khi push sẽ bị "conflict" (Git từ chối vì 2 bên cùng sửa một
+  chỗ khác nhau), và nếu xử lý conflict sai chiều (chọn nhầm phía) sẽ **âm
+  thầm xóa mất bản vá của bên kia** mà không ai nhận ra ngay — đã xảy ra thật
+  một lần: Antigravity sửa code từ bản cũ (thiếu các bản vá bảo mật mới nhất
+  của Claude Code), tạo conflict ở `AttendancePage.tsx`/`ClassesPage.tsx`, và
+  bước resolve conflict ban đầu chọn nhầm phía làm mất bản vá chống trừ buổi
+  học 2 lần — phải rà soát lại thủ công mới phát hiện ra. `git pull` trước
+  khi sửa giúp tránh việc này ngay từ đầu.
 
 ## Firebase project thật
 
