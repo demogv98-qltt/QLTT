@@ -7,3 +7,6 @@ ui-debug.log
 pubsub-debug.log
 *.log
 .emulator-data/
+# Service account keys - không commit credentials
+demo-script/serviceAccountKey.json
+**/serviceAccountKey.json

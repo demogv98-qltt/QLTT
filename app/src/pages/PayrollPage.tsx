@@ -1,4 +1,11 @@
-import { collection, doc, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  query,
+  serverTimestamp,
+  setDoc,
+  where,
+} from 'firebase/firestore'
 import { useMemo, useState } from 'react'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
@@ -19,18 +26,35 @@ import {
   Eye,
   Users,
 } from 'lucide-react'
-import type { AppUser, ClassGroup, ClassSession, Payroll } from '../types'
+import type { AppUser, ClassGroup, ClassSession, Enrollment, Payment, Payroll } from '../types'
 
 const DEFAULT_TEACHER_RATE = 200000 // 200k/ca
 const DEFAULT_TA_RATE = 80000 // 80k/ca
+
+// Thù lao tính theo 1 lớp (có thể là cố định/ca hoặc % doanh thu)
+interface ClassPayEntry {
+  classId: string
+  className: string
+  salaryMode: 'fixed_per_session' | 'percentage_revenue'
+  sessionsCount: number
+  /** Chỉ có khi fixed_per_session */
+  rate?: number
+  /** Chỉ có khi percentage_revenue */
+  validRevenue?: number
+  revenuePercentage?: number
+  standardSessionsPerMonth?: number
+  subtotal: number
+}
 
 interface StaffPayrollItem {
   user: AppUser
   roleLabel: string
   sessionsCount: number
   sessions: { session: ClassSession; className: string }[]
-  rate: number
+  classEntries: ClassPayEntry[]
+  rate: number // chỉ dùng cho fixed mode (legacy/display)
   bonus: number
+  bonusReason: string
   total: number
   paid: boolean
   payrollDocId?: string
@@ -83,6 +107,66 @@ export function PayrollPage() {
     return allSessions.filter((s) => s.date && s.date.startsWith(month))
   }, [allSessions, month])
 
+  // Payments cho các lớp % doanh thu trong tháng này
+  // Query: orgId + centerId (dùng index đã có) — lọc theo classId & forMonth clientside
+  const { data: allPayments } = useCollection<Payment>(
+    () =>
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'payments'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+          )
+        : null,
+    [selectedCenterId, profile, month],
+  )
+
+  // Enrollments — để kiểm tra droppedOut
+  const { data: allEnrollments } = useCollection<Enrollment>(
+    () =>
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'enrollments'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+          )
+        : null,
+    [selectedCenterId, profile],
+  )
+
+  // Map enrollmentId → enrollment để tra droppedOut nhanh
+  const enrollmentMap = useMemo(
+    () => new Map(allEnrollments.map((e) => [e.id, e])),
+    [allEnrollments],
+  )
+
+  // Tính doanh thu hợp lệ theo lớp + tháng (loại payment của enrollment droppedOut)
+  const validRevenueByClassMonth = useMemo(() => {
+    const map: Record<string, number> = {} // key: `${classId}_${forMonth}`
+    for (const p of allPayments) {
+      if (!p.classId || !p.forMonth) continue // doc cũ không có field — bỏ qua
+      if (p.forMonth !== month) continue // chỉ tính tháng đang xem
+      // Kiểm tra enrollment tương ứng có droppedOut không
+      // enrollment của payment này có thể tra qua enrollmentId hoặc tìm theo studentId+classId
+      let dropped = false
+      if (p.enrollmentId) {
+        const en = enrollmentMap.get(p.enrollmentId)
+        if (en?.droppedOut) dropped = true
+      } else {
+        // Không có enrollmentId — tìm enrollment active nhất của student trong lớp đó
+        const match = allEnrollments.find(
+          (e) => e.studentId === p.studentId && e.classId === p.classId,
+        )
+        if (match?.droppedOut) dropped = true
+      }
+      if (!dropped) {
+        const key = `${p.classId}_${p.forMonth}`
+        map[key] = (map[key] ?? 0) + p.amount
+      }
+    }
+    return map
+  }, [allPayments, allEnrollments, enrollmentMap, month])
+
   // Stored payroll records from Firestore
   const { data: savedPayrolls } = useCollection<Payroll>(
     () =>
@@ -104,6 +188,7 @@ export function PayrollPage() {
   // Local state for editable rates & bonuses before saving
   const [customRates, setCustomRates] = useState<Record<string, number>>({})
   const [customBonuses, setCustomBonuses] = useState<Record<string, number>>({})
+  const [customBonusReasons, setCustomBonusReasons] = useState<Record<string, string>>({})
 
   // Modals state
   const [selectedStaffForSlip, setSelectedStaffForSlip] = useState<StaffPayrollItem | null>(null)
@@ -119,45 +204,122 @@ export function PayrollPage() {
 
   const payrollItems: StaffPayrollItem[] = useMemo(() => {
     return visibleStaff.map((staff) => {
-      // Find all sessions taught or assisted by this staff
-      const staffSessions: { session: ClassSession; className: string }[] = []
+      const savedDoc = savedPayrollMap.get(staff.id)
+      const bonus =
+        customBonuses[staff.id] ??
+        savedDoc?.bonusAmount ??
+        0
+      const bonusReason =
+        customBonusReasons[staff.id] ??
+        savedDoc?.bonusReason ??
+        ''
+
+      // Nhóm sessions theo lớp
+      const sessionsByClass: Record<string, ClassSession[]> = {}
       for (const sess of monthSessions) {
+        if (sess.status === 'canceled') continue
         const cls = classMap.get(sess.classId)
         if (!cls) continue
         const isTeacher = cls.teacherId === staff.id
         const isTa = cls.taIds?.includes(staff.id)
-        if (isTeacher || isTa) {
-          staffSessions.push({
-            session: sess,
+        if (!isTeacher && !isTa) continue
+        if (!sessionsByClass[sess.classId]) sessionsByClass[sess.classId] = []
+        sessionsByClass[sess.classId].push(sess)
+      }
+
+      const staffSessions: { session: ClassSession; className: string }[] = []
+      const classEntries: ClassPayEntry[] = []
+      let totalFromClasses = 0
+
+      for (const [cid, sessions] of Object.entries(sessionsByClass)) {
+        const cls = classMap.get(cid)
+        if (!cls) continue
+
+        // Thêm vào danh sách sessions chung để hiển thị chi tiết
+        for (const s of sessions) {
+          staffSessions.push({ session: s, className: cls.name })
+        }
+
+        const mode = cls.salaryMode ?? 'fixed_per_session'
+
+        if (mode === 'percentage_revenue') {
+          // Đếm buổi thực dạy (bỏ qua teacherAbsent)
+          const realSessions = sessions.filter((s) => !s.teacherAbsent)
+          const realSessionsCount = realSessions.length
+          const pct = cls.revenuePercentage ?? 20
+          const stdSessions = cls.standardSessionsPerMonth ?? 8
+          const validRevenue = validRevenueByClassMonth[`${cid}_${month}`] ?? 0
+          const subtotal = stdSessions > 0
+            ? Math.round((validRevenue * pct) / 100 / stdSessions * realSessionsCount)
+            : 0
+          classEntries.push({
+            classId: cid,
             className: cls.name,
+            salaryMode: 'percentage_revenue',
+            sessionsCount: realSessionsCount,
+            validRevenue,
+            revenuePercentage: pct,
+            standardSessionsPerMonth: stdSessions,
+            subtotal,
           })
+          totalFromClasses += subtotal
+        } else {
+          // Cố định/ca (logic cũ)
+          const defaultRate = staff.role === 'teacher' ? DEFAULT_TEACHER_RATE : DEFAULT_TA_RATE
+          const rate =
+            customRates[staff.id] ??
+            savedDoc?.ratePerSession ??
+            defaultRate
+          const subtotal = sessions.length * rate
+          classEntries.push({
+            classId: cid,
+            className: cls.name,
+            salaryMode: 'fixed_per_session',
+            sessionsCount: sessions.length,
+            rate,
+            subtotal,
+          })
+          totalFromClasses += subtotal
         }
       }
 
-      const sessionsCount = staffSessions.length
+      // Rate đại diện: dùng cho legacy display & payslip (lấy từ class cố định đầu tiên hoặc default)
+      const fixedEntry = classEntries.find((e) => e.salaryMode === 'fixed_per_session')
       const defaultRate = staff.role === 'teacher' ? DEFAULT_TEACHER_RATE : DEFAULT_TA_RATE
-      const rate =
+      const displayRate =
+        fixedEntry?.rate ??
         customRates[staff.id] ??
-        savedPayrollMap.get(staff.id)?.ratePerSession ??
+        savedDoc?.ratePerSession ??
         defaultRate
 
-      const bonus = customBonuses[staff.id] ?? 0
-      const total = sessionsCount * rate + bonus
-      const savedDoc = savedPayrollMap.get(staff.id)
+      const total = totalFromClasses + bonus
+      const sessionsCount = staffSessions.length
 
       return {
         user: staff,
         roleLabel: staff.role === 'teacher' ? 'Giáo viên' : 'Trợ giảng',
         sessionsCount,
         sessions: staffSessions.sort((a, b) => a.session.date.localeCompare(b.session.date)),
-        rate,
+        classEntries,
+        rate: displayRate,
         bonus,
+        bonusReason,
         total,
         paid: !!savedDoc,
         payrollDocId: savedDoc?.id,
       }
     })
-  }, [visibleStaff, monthSessions, classMap, customRates, savedPayrollMap, customBonuses])
+  }, [
+    visibleStaff,
+    monthSessions,
+    classMap,
+    customRates,
+    savedPayrollMap,
+    customBonuses,
+    customBonusReasons,
+    validRevenueByClassMonth,
+    month,
+  ])
 
   // Overall summary
   const totalCenterPayroll = payrollItems.reduce((sum, item) => sum + item.total, 0)
@@ -177,6 +339,8 @@ export function PayrollPage() {
         sessionsCount: item.sessionsCount,
         ratePerSession: item.rate,
         total: item.total,
+        bonusAmount: item.bonus,
+        bonusReason: item.bonusReason,
         generatedAt: serverTimestamp(),
       })
     } finally {
@@ -186,13 +350,22 @@ export function PayrollPage() {
 
   // Generate Zalo notification URL
   const getZaloShareUrl = (item: StaffPayrollItem) => {
+    const hasPercentage = item.classEntries.some((e) => e.salaryMode === 'percentage_revenue')
     const text = encodeURIComponent(
       `Kính gửi Thầy/Cô ${item.user.displayName},\n` +
-        `Trung tâm Toán học gửi bảng xác nhận thù lao giảng dạy tháng ${month}:\n` +
+        `Trung tâm gửi bảng xác nhận thù lao giảng dạy tháng ${month}:\n` +
         `• Chức vụ: ${item.roleLabel}\n` +
         `• Tổng số ca đã dạy: ${item.sessionsCount} ca\n` +
-        `• Đơn giá: ${formatVND(item.rate)}/ca\n` +
-        `• Phụ cấp/Thưởng: ${formatVND(item.bonus)}\n` +
+        (hasPercentage
+          ? item.classEntries
+              .map((e) =>
+                e.salaryMode === 'percentage_revenue'
+                  ? `  • ${e.className}: ${e.sessionsCount} buổi thực dạy · DT hợp lệ: ${formatVND(e.validRevenue ?? 0)} → ${formatVND(e.subtotal)}`
+                  : `  • ${e.className}: ${e.sessionsCount} ca × ${formatVND(e.rate ?? 0)} = ${formatVND(e.subtotal)}`,
+              )
+              .join('\n') + '\n'
+          : `• Đơn giá: ${formatVND(item.rate)}/ca\n`) +
+        `• Phụ cấp/Thưởng: ${formatVND(item.bonus)}${item.bonusReason ? ` (${item.bonusReason})` : ''}\n` +
         `• TỔNG THÙ LAO: ${formatVND(item.total)}\n` +
         `Thầy/Cô vui lòng đối soát và liên hệ quản trị nếu cần hỗ trợ ạ. Chúc Thầy/Cô nhiều sức khỏe!`,
     )
@@ -285,7 +458,7 @@ export function PayrollPage() {
                   <th className="px-4 py-3.5 sm:px-6">Nhân sự</th>
                   <th className="px-3 py-3.5">Vai trò</th>
                   <th className="px-3 py-3.5 text-center">Số ca dạy</th>
-                  <th className="px-3 py-3.5">Đơn giá / ca</th>
+                  <th className="px-3 py-3.5">Chế độ lương / Đơn giá</th>
                   <th className="px-3 py-3.5">Thưởng / Phụ cấp</th>
                   <th className="px-3 py-3.5">Tổng thù lao</th>
                   <th className="px-3 py-3.5 text-center">Trạng thái</th>
@@ -293,132 +466,182 @@ export function PayrollPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {payrollItems.map((item) => (
-                  <tr key={item.user.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3.5 sm:px-6">
-                      <div className="font-bold text-slate-900">{item.user.displayName}</div>
-                      <div className="text-xs text-slate-400">{item.user.email}</div>
-                    </td>
+                {payrollItems.map((item) => {
+                  const hasFixed = item.classEntries.some((e) => e.salaryMode === 'fixed_per_session')
 
-                    <td className="px-3 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${
-                          item.user.role === 'teacher'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-purple-50 text-purple-700 border border-purple-200'
-                        }`}
-                      >
-                        {item.roleLabel}
-                      </span>
-                    </td>
+                  return (
+                    <tr key={item.user.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3.5 sm:px-6">
+                        <div className="font-bold text-slate-900">{item.user.displayName}</div>
+                        <div className="text-xs text-slate-400">{item.user.email}</div>
+                      </td>
 
-                    <td className="px-3 py-3.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedStaffForDetail(item)}
-                        className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline decoration-dotted"
-                        title="Bấm để xem danh sách chi tiết các ca đã dạy"
-                      >
-                        {item.sessionsCount} ca
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-
-                    <td className="px-3 py-3.5">
-                      {manage ? (
-                        <input
-                          type="number"
-                          step={10000}
-                          value={item.rate}
-                          onChange={(e) =>
-                            setCustomRates((prev) => ({
-                              ...prev,
-                              [item.user.id]: Number(e.target.value) || 0,
-                            }))
-                          }
-                          className="w-28 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 focus:border-indigo-600 focus:outline-hidden"
-                        />
-                      ) : (
-                        <span>{formatVND(item.rate)}</span>
-                      )}
-                    </td>
-
-                    <td className="px-3 py-3.5">
-                      {manage ? (
-                        <input
-                          type="number"
-                          step={10000}
-                          placeholder="0"
-                          value={item.bonus || ''}
-                          onChange={(e) =>
-                            setCustomBonuses((prev) => ({
-                              ...prev,
-                              [item.user.id]: Number(e.target.value) || 0,
-                            }))
-                          }
-                          className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 focus:border-indigo-600 focus:outline-hidden"
-                        />
-                      ) : (
-                        <span>{formatVND(item.bonus)}</span>
-                      )}
-                    </td>
-
-                    <td className="px-3 py-3.5">
-                      <span className="font-extrabold text-emerald-600 text-base">
-                        {formatVND(item.total)}
-                      </span>
-                    </td>
-
-                    <td className="px-3 py-3.5 text-center">
-                      {item.paid ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Đã chốt
+                      <td className="px-3 py-3.5">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${
+                            item.user.role === 'teacher'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-purple-50 text-purple-700 border border-purple-200'
+                          }`}
+                        >
+                          {item.roleLabel}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">
-                          <Clock className="h-3 w-3" />
-                          Chờ chốt
-                        </span>
-                      )}
-                    </td>
+                      </td>
 
-                    <td className="px-4 py-3.5 text-right sm:px-6">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {manage && (
-                          <button
-                            type="button"
-                            disabled={savingStaffId === item.user.id}
-                            onClick={() => handleSavePayroll(item)}
-                            className="rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                            title="Lưu trạng thái chốt lương vào hệ thống"
-                          >
-                            {savingStaffId === item.user.id ? 'Đang lưu...' : 'Chốt'}
-                          </button>
-                        )}
-
+                      <td className="px-3 py-3.5 text-center">
                         <button
                           type="button"
-                          onClick={() => setSelectedStaffForSlip(item)}
-                          className="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                          title="Xem & In phiếu lương"
+                          onClick={() => setSelectedStaffForDetail(item)}
+                          className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline decoration-dotted"
+                          title="Bấm để xem danh sách chi tiết các ca đã dạy"
                         >
-                          <Printer className="h-4 w-4" />
+                          {item.sessionsCount} ca
+                          <Eye className="h-3.5 w-3.5" />
                         </button>
+                      </td>
 
-                        <a
-                          href={getZaloShareUrl(item)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-lg bg-blue-50 p-1.5 text-blue-600 hover:bg-blue-100 transition-colors"
-                          title="Gửi xác nhận thù lao qua Zalo"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-3 py-3.5">
+                        {/* Hiển thị chế độ lương theo lớp */}
+                        <div className="space-y-1">
+                          {item.classEntries.length === 0 && (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                          {item.classEntries.map((entry) => (
+                            <div key={entry.classId} className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold border ${
+                                  entry.salaryMode === 'percentage_revenue'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                                }`}
+                              >
+                                {entry.salaryMode === 'percentage_revenue'
+                                  ? `Khoán ${entry.revenuePercentage}% DT`
+                                  : 'Cố định/ca'}
+                              </span>
+                              <span className="text-xs text-slate-600 truncate max-w-[120px]">
+                                {entry.className}
+                              </span>
+                            </div>
+                          ))}
+                          {/* Ô nhập đơn giá — chỉ hiện khi có ít nhất 1 lớp cố định */}
+                          {hasFixed && manage && (
+                            <input
+                              type="number"
+                              step={10000}
+                              value={item.rate}
+                              onChange={(e) =>
+                                setCustomRates((prev) => ({
+                                  ...prev,
+                                  [item.user.id]: Number(e.target.value) || 0,
+                                }))
+                              }
+                              className="mt-1 w-28 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 focus:border-indigo-600 focus:outline-hidden"
+                              placeholder="Đơn giá/ca"
+                            />
+                          )}
+                          {hasFixed && !manage && (
+                            <span className="text-xs text-slate-600">{formatVND(item.rate)}/ca</span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        {manage ? (
+                          <div className="space-y-1">
+                            <input
+                              type="number"
+                              step={10000}
+                              placeholder="0"
+                              value={item.bonus || ''}
+                              onChange={(e) =>
+                                setCustomBonuses((prev) => ({
+                                  ...prev,
+                                  [item.user.id]: Number(e.target.value) || 0,
+                                }))
+                              }
+                              className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 focus:border-indigo-600 focus:outline-hidden"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Lý do thưởng"
+                              value={item.bonusReason || ''}
+                              onChange={(e) =>
+                                setCustomBonusReasons((prev) => ({
+                                  ...prev,
+                                  [item.user.id]: e.target.value,
+                                }))
+                              }
+                              className="w-28 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-indigo-600 focus:outline-hidden"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <span>{formatVND(item.bonus)}</span>
+                            {item.bonusReason && (
+                              <p className="text-[11px] text-slate-500">{item.bonusReason}</p>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <span className="font-extrabold text-emerald-600 text-base">
+                          {formatVND(item.total)}
+                        </span>
+                      </td>
+
+                      <td className="px-3 py-3.5 text-center">
+                        {item.paid ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Đã chốt
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">
+                            <Clock className="h-3 w-3" />
+                            Chờ chốt
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3.5 text-right sm:px-6">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {manage && (
+                            <button
+                              type="button"
+                              disabled={savingStaffId === item.user.id}
+                              onClick={() => handleSavePayroll(item)}
+                              className="rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                              title="Lưu trạng thái chốt lương vào hệ thống"
+                            >
+                              {savingStaffId === item.user.id ? 'Đang lưu...' : 'Chốt'}
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStaffForSlip(item)}
+                            className="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                            title="Xem & In phiếu lương"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </button>
+
+                          <a
+                            href={getZaloShareUrl(item)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-lg bg-blue-50 p-1.5 text-blue-600 hover:bg-blue-100 transition-colors"
+                            title="Gửi xác nhận thù lao qua Zalo"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -447,7 +670,44 @@ export function PayrollPage() {
               </p>
             </div>
 
-            <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
+            {/* Chi tiết theo lớp */}
+            {selectedStaffForDetail.classEntries.length > 0 && (
+              <div className="mb-3 space-y-2">
+                {selectedStaffForDetail.classEntries.map((entry) => (
+                  <div
+                    key={entry.classId}
+                    className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-slate-900">{entry.className}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold border ${
+                          entry.salaryMode === 'percentage_revenue'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {entry.salaryMode === 'percentage_revenue' ? 'Khoán % DT' : 'Cố định/ca'}
+                      </span>
+                    </div>
+                    {entry.salaryMode === 'percentage_revenue' ? (
+                      <p className="text-slate-500">
+                        {entry.sessionsCount} buổi thực dạy · DT hợp lệ: {formatVND(entry.validRevenue ?? 0)}{' '}
+                        × {entry.revenuePercentage}% ÷ {entry.standardSessionsPerMonth} buổi chuẩn ={' '}
+                        <strong className="text-emerald-700">{formatVND(entry.subtotal)}</strong>
+                      </p>
+                    ) : (
+                      <p className="text-slate-500">
+                        {entry.sessionsCount} ca × {formatVND(entry.rate ?? 0)} ={' '}
+                        <strong className="text-emerald-700">{formatVND(entry.subtotal)}</strong>
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
               {selectedStaffForDetail.sessions.length === 0 ? (
                 <p className="text-center py-8 text-xs text-slate-400">
                   Không có ca dạy nào được ghi nhận trong tháng này.
@@ -465,9 +725,16 @@ export function PayrollPage() {
                         {item.session.startTime && ` · ${item.session.startTime} - ${item.session.endTime}`}
                       </p>
                     </div>
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 text-[10px]">
-                      Hoàn thành
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 text-[10px]">
+                        Hoàn thành
+                      </span>
+                      {item.session.teacherAbsent && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-amber-700 text-[10px]">
+                          GV vắng
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -525,13 +792,22 @@ export function PayrollPage() {
                   <span className="text-slate-500">Số ca giảng dạy / trợ giảng:</span>
                   <span className="font-bold text-indigo-700">{selectedStaffForSlip.sessionsCount} ca</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Mức thù lao / ca:</span>
-                  <span className="font-semibold text-slate-800">{formatVND(selectedStaffForSlip.rate)}</span>
-                </div>
+                {/* Chi tiết theo lớp trong phiếu */}
+                {selectedStaffForSlip.classEntries.map((entry) => (
+                  <div key={entry.classId} className="flex justify-between text-[11px]">
+                    <span className="text-slate-400 max-w-[180px] truncate">↳ {entry.className}:</span>
+                    <span className="text-slate-600">
+                      {entry.salaryMode === 'percentage_revenue'
+                        ? `${entry.sessionsCount}b × ${entry.revenuePercentage}%DT = ${formatVND(entry.subtotal)}`
+                        : `${entry.sessionsCount}ca × ${formatVND(entry.rate ?? 0)} = ${formatVND(entry.subtotal)}`}
+                    </span>
+                  </div>
+                ))}
                 {selectedStaffForSlip.bonus > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Phụ cấp / Thưởng:</span>
+                    <span className="text-slate-500">
+                      Phụ cấp / Thưởng{selectedStaffForSlip.bonusReason ? ` (${selectedStaffForSlip.bonusReason})` : ''}:
+                    </span>
                     <span className="font-semibold text-emerald-700">{formatVND(selectedStaffForSlip.bonus)}</span>
                   </div>
                 )}

@@ -41,6 +41,10 @@ export function ClassesPage() {
   const [taIds, setTaIds] = useState<string[]>([])
   const [room, setRoom] = useState('')
   const [slots, setSlots] = useState<RecurringSlot[]>([{ weekday: 1, startTime: '19:00', endTime: '20:30' }])
+  // Cấu hình lương khoán % doanh thu
+  const [salaryMode, setSalaryMode] = useState<'fixed_per_session' | 'percentage_revenue'>('fixed_per_session')
+  const [revenuePercentage, setRevenuePercentage] = useState(20)
+  const [standardSessionsPerMonth, setStandardSessionsPerMonth] = useState(8)
   const [submitting, setSubmitting] = useState(false)
 
   function updateSlot(index: number, patch: Partial<RecurringSlot>) {
@@ -52,7 +56,7 @@ export function ClassesPage() {
     if (!name.trim() || !selectedCenterId || !teacherId || !profile) return
     setSubmitting(true)
     try {
-      await addDoc(collection(db, 'classes'), {
+      const classData: Record<string, unknown> = {
         orgId: profile.orgId,
         centerId: selectedCenterId,
         name: name.trim(),
@@ -62,14 +66,23 @@ export function ClassesPage() {
         schedule: slots,
         room: room.trim(),
         active: true,
+        salaryMode,
         createdAt: serverTimestamp(),
-      })
+      }
+      if (salaryMode === 'percentage_revenue') {
+        classData.revenuePercentage = revenuePercentage
+        classData.standardSessionsPerMonth = standardSessionsPerMonth
+      }
+      await addDoc(collection(db, 'classes'), classData)
       setName('')
       setSubject('')
       setTeacherId('')
       setTaIds([])
       setRoom('')
       setSlots([{ weekday: 1, startTime: '19:00', endTime: '20:30' }])
+      setSalaryMode('fixed_per_session')
+      setRevenuePercentage(20)
+      setStandardSessionsPerMonth(8)
     } finally {
       setSubmitting(false)
     }
@@ -224,6 +237,75 @@ export function ClassesPage() {
             </button>
           </div>
 
+          {/* ===== CẤU HÌNH LƯƠNG ===== */}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <p className="text-sm font-semibold text-slate-700">Cách tính thù lao giáo viên</p>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="salaryMode"
+                  value="fixed_per_session"
+                  checked={salaryMode === 'fixed_per_session'}
+                  onChange={() => setSalaryMode('fixed_per_session')}
+                  className="accent-indigo-600"
+                />
+                Cố định theo ca (mặc định)
+              </label>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="salaryMode"
+                  value="percentage_revenue"
+                  checked={salaryMode === 'percentage_revenue'}
+                  onChange={() => setSalaryMode('percentage_revenue')}
+                  className="accent-indigo-600"
+                />
+                Khoán % doanh thu
+              </label>
+            </div>
+
+            {salaryMode === 'percentage_revenue' && (
+              <div className="flex flex-wrap gap-3 items-end pt-1">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">
+                    Tỷ lệ % doanh thu
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={revenuePercentage}
+                      onChange={(e) => setRevenuePercentage(Number(e.target.value))}
+                      className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                    />
+                    <span className="text-sm text-slate-500">%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">
+                    Số buổi chuẩn / tháng
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={standardSessionsPerMonth}
+                      onChange={(e) => setStandardSessionsPerMonth(Number(e.target.value))}
+                      className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                    />
+                    <span className="text-sm text-slate-500">buổi</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 max-w-xs">
+                  Công thức: (Doanh thu hợp lệ × {revenuePercentage}% ÷ {standardSessionsPerMonth} buổi chuẩn) × Số buổi thực dạy
+                </p>
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={submitting}
@@ -240,7 +322,19 @@ export function ClassesPage() {
         <ul className="space-y-2">
           {classes.map((c) => (
             <li key={c.id} className="rounded-lg border border-gray-200 bg-white p-3">
-              <p className="font-medium text-gray-900">{c.name}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-gray-900">{c.name}</p>
+                {/* Badge chế độ lương */}
+                {c.salaryMode === 'percentage_revenue' ? (
+                  <span className="shrink-0 rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-[10px] font-bold">
+                    Khoán {c.revenuePercentage ?? 20}% DT
+                  </span>
+                ) : (
+                  <span className="shrink-0 rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 text-[10px] font-bold">
+                    Cố định/ca
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-500">
                 {c.subject} · Phòng {c.room || '-'}
               </p>

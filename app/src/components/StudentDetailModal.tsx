@@ -1,4 +1,4 @@
-import { collection, query, where } from 'firebase/firestore'
+import { collection, query, updateDoc, doc, where } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
@@ -7,12 +7,14 @@ import { studentAvatar } from '../lib/avatar'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
 import { useOrgStore } from '../stores/orgStore'
+import { canManage } from '../lib/roles'
 import { StudentCardModal } from './StudentCardModal'
 import {
   X,
   QrCode,
   Phone,
   MessageCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import type { Attendance, AttendanceStatus, ClassGroup, Enrollment, Payment, Student } from '../types'
 
@@ -41,6 +43,7 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
   const { organization } = useOrgStore()
   const [activeTab, setActiveTab] = useState<'progress' | 'attendance' | 'payments'>('progress')
   const [showQRCard, setShowQRCard] = useState(false)
+  const manage = canManage(profile?.role)
 
   const studentCenter = centers.find((c) => c.id === student?.centerId)
 
@@ -134,6 +137,19 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
     : 'Chưa cập nhật'
 
   const cleanPhone = (student.parentPhone || student.phone || '').replace(/\D/g, '')
+
+  async function handleDropOut(enrollmentId: string, currentValue: boolean) {
+    const newValue = !currentValue
+    if (
+      !window.confirm(
+        newValue
+          ? 'Đánh dấu học sinh này là NGHỈ NGANG (không hoàn phí)?\nDoanh thu của gói này sẽ không tính vào lương khoán % doanh thu.'
+          : 'Bỏ đánh dấu nghỉ ngang?',
+      )
+    )
+      return
+    await updateDoc(doc(db, 'enrollments', enrollmentId), { droppedOut: newValue })
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -353,6 +369,33 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
                           />
                         </div>
                       </div>
+
+                      {/* droppedOut badge + nút chỉ owner/manager thấy */}
+                      {(en.droppedOut || manage) && (
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                          {en.droppedOut ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                              <AlertTriangle className="h-3 w-3" />
+                              Đã nghỉ ngang (không hoàn phí)
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                          {manage && (
+                            <button
+                              type="button"
+                              onClick={() => handleDropOut(en.id, !!en.droppedOut)}
+                              className={`text-[11px] font-semibold rounded-lg px-2.5 py-1 transition-colors ${
+                                en.droppedOut
+                                  ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                              }`}
+                            >
+                              {en.droppedOut ? 'Bỏ đánh dấu' : 'Đánh dấu nghỉ ngang (không hoàn phí)'}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })

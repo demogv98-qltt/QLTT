@@ -158,6 +158,15 @@
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "name", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "classId", "order": "ASCENDING" },
+        { "fieldPath": "forMonth", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

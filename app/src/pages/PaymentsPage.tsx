@@ -12,7 +12,8 @@ import { studentAvatar } from '../lib/avatar'
 import { useCollection } from '../lib/useCollection'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
-import type { Enrollment, Payment, PaymentMethod, Student } from '../types'
+import { currentMonthValue } from '../lib/month'
+import type { ClassGroup, Enrollment, Payment, PaymentMethod, Student } from '../types'
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Tiền mặt',
@@ -40,6 +41,21 @@ export function PaymentsPage() {
         : null,
     [selectedCenterId, profile],
   )
+
+  // Load classes của cơ sở để chọn khi ghi nhận thanh toán
+  const { data: classes } = useCollection<ClassGroup>(
+    () =>
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'classes'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            orderBy('name'),
+          )
+        : null,
+    [selectedCenterId, profile],
+  )
+
   const { data: enrollments } = useCollection<Enrollment>(
     () =>
       selectedCenterId && profile
@@ -65,6 +81,7 @@ export function PaymentsPage() {
   )
 
   const studentName = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s.fullName])), [students])
+  const classNameMap = useMemo(() => Object.fromEntries(classes.map((c) => [c.id, c.name])), [classes])
 
   const debtByStudent = useMemo(() => {
     const owed: Record<string, number> = {}
@@ -83,6 +100,9 @@ export function PaymentsPage() {
   }, [students, enrollments, payments])
 
   const [studentId, setStudentId] = useState('')
+  // classId và forMonth là bắt buộc cho payment mới (doc cũ không có — xử lý undefined khi đọc)
+  const [payClassId, setPayClassId] = useState('')
+  const [forMonth, setForMonth] = useState(() => currentMonthValue())
   const [amount, setAmount] = useState(0)
   const [method, setMethod] = useState<PaymentMethod>('cash')
   const [note, setNote] = useState('')
@@ -90,13 +110,15 @@ export function PaymentsPage() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
-    if (!studentId || amount <= 0 || !selectedCenterId || !profile) return
+    if (!studentId || !payClassId || !forMonth || amount <= 0 || !selectedCenterId || !profile) return
     setSubmitting(true)
     try {
       await addDoc(collection(db, 'payments'), {
         orgId: profile.orgId,
         studentId,
         centerId: selectedCenterId,
+        classId: payClassId,
+        forMonth,
         amount,
         method,
         note: note.trim(),
@@ -104,6 +126,8 @@ export function PaymentsPage() {
         recordedAt: serverTimestamp(),
       })
       setStudentId('')
+      setPayClassId('')
+      setForMonth(currentMonthValue())
       setAmount(0)
       setNote('')
     } finally {
@@ -119,62 +143,107 @@ export function PaymentsPage() {
     <div className="max-w-4xl">
       <h2 className="mb-4 text-lg font-semibold text-gray-900">Thanh toán</h2>
 
-      <form onSubmit={handleCreate} className="mb-6 flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-white p-4">
-        <div>
-          <label className="mb-1 block text-xs text-gray-500">Học sinh</label>
-          <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-2 text-sm"
+      <form onSubmit={handleCreate} className="mb-6 space-y-3 rounded-lg border border-gray-200 bg-white p-4">
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">Học sinh</label>
+            <select
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              required
+              className="rounded-md border border-gray-300 px-2 py-2 text-sm"
+            >
+              <option value="">-- Chọn học sinh --</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">Lớp</label>
+            <select
+              value={payClassId}
+              onChange={(e) => setPayClassId(e.target.value)}
+              required
+              className="rounded-md border border-gray-300 px-2 py-2 text-sm"
+            >
+              <option value="">-- Chọn lớp --</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">
+              Tháng áp dụng{' '}
+              <span className="text-amber-600 font-semibold">(tháng nào đang đóng)</span>
+            </label>
+            <input
+              type="month"
+              value={forMonth}
+              onChange={(e) => setForMonth(e.target.value)}
+              required
+              className="rounded-md border border-gray-300 px-2 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">Số tiền (đ)</label>
+            <input
+              type="number"
+              min={0}
+              step={1000}
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="w-32 rounded-md border border-gray-300 px-2 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">Hình thức</label>
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+              className="rounded-md border border-gray-300 px-2 py-2 text-sm"
+            >
+              {(Object.keys(METHOD_LABELS) as PaymentMethod[]).map((m) => (
+                <option key={m} value={m}>
+                  {METHOD_LABELS[m]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1 min-w-[160px]">
+            <label className="mb-1 block text-xs text-gray-500">Ghi chú</label>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="VD: Thu nợ tháng trước"
+              className="w-full rounded-md border border-gray-300 px-2 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            <option value="">-- Chọn --</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.fullName}
-              </option>
-            ))}
-          </select>
+            Ghi nhận
+          </button>
+          <p className="text-xs text-slate-500">
+            💡 <strong>Lưu ý:</strong> Chọn đúng <em>Tháng áp dụng</em> (không phải tháng ghi nhận) để tính
+            đúng doanh thu hợp lệ cho bảng lương khoán.
+          </p>
         </div>
-        <div>
-          <label className="mb-1 block text-xs text-gray-500">Số tiền (đ)</label>
-          <input
-            type="number"
-            min={0}
-            step={1000}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-32 rounded-md border border-gray-300 px-2 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-gray-500">Hình thức</label>
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-            className="rounded-md border border-gray-300 px-2 py-2 text-sm"
-          >
-            {(Object.keys(METHOD_LABELS) as PaymentMethod[]).map((m) => (
-              <option key={m} value={m}>
-                {METHOD_LABELS[m]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex-1 min-w-[160px]">
-          <label className="mb-1 block text-xs text-gray-500">Ghi chú</label>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-2 py-2 text-sm"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          Ghi nhận
-        </button>
       </form>
 
       {debtByStudent.some((r) => r.debt > 0) && (
@@ -200,10 +269,12 @@ export function PaymentsPage() {
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>
               <th className="px-3 py-2">Học sinh</th>
+              <th className="px-3 py-2">Lớp</th>
+              <th className="px-3 py-2">Tháng áp dụng</th>
               <th className="px-3 py-2">Số tiền</th>
               <th className="px-3 py-2">Hình thức</th>
               <th className="px-3 py-2">Ghi chú</th>
-              <th className="px-3 py-2">Thời gian</th>
+              <th className="px-3 py-2">Thời gian ghi nhận</th>
             </tr>
           </thead>
           <tbody>
@@ -212,6 +283,13 @@ export function PaymentsPage() {
                 <td className="px-3 py-2 font-medium text-gray-900">
                   <span className="mr-2">{studentAvatar(p.studentId)}</span>
                   {studentName[p.studentId] ?? '—'}
+                </td>
+                <td className="px-3 py-2 text-gray-600">
+                  {/* classId có thể undefined ở doc cũ — hiển thị "—" thay vì crash */}
+                  {p.classId ? (classNameMap[p.classId] ?? p.classId) : '—'}
+                </td>
+                <td className="px-3 py-2 text-gray-600">
+                  {p.forMonth ?? '—'}
                 </td>
                 <td className="px-3 py-2 text-gray-700">{formatVND(p.amount)}</td>
                 <td className="px-3 py-2 text-gray-600">{METHOD_LABELS[p.method]}</td>
@@ -223,7 +301,7 @@ export function PaymentsPage() {
             ))}
             {payments.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-center text-gray-400">
+                <td colSpan={7} className="px-3 py-4 text-center text-gray-400">
                   Chưa có giao dịch nào.
                 </td>
               </tr>

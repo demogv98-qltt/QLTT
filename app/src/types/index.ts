@@ -63,6 +63,12 @@ export interface ClassGroup {
   room?: string
   active: boolean
   createdAt: Timestamp
+  /** Cách tính lương cho lớp này. Không set = mặc định 'fixed_per_session' (giữ nguyên cách cũ). */
+  salaryMode?: 'fixed_per_session' | 'percentage_revenue'
+  /** Chỉ dùng khi salaryMode = 'percentage_revenue'. VD 20 nghĩa là 20%. */
+  revenuePercentage?: number
+  /** Chỉ dùng khi salaryMode = 'percentage_revenue'. Số buổi chuẩn/tháng của lớp (VD 8 hoặc 12) — dùng làm mẫu số khi trừ theo buổi giáo viên nghỉ. */
+  standardSessionsPerMonth?: number
 }
 
 export type SessionStatus = 'scheduled' | 'completed' | 'canceled'
@@ -77,6 +83,9 @@ export interface ClassSession {
   endTime: string
   status: SessionStatus
   createdAt: Timestamp
+  /** true = giáo viên/trợ giảng chính KHÔNG có mặt dạy buổi này (dù lớp vẫn diễn ra, VD có người dạy thay).
+   * Dùng để trừ buổi khi tính lương % doanh thu. Mặc định/không set = giáo viên có dạy. */
+  teacherAbsent?: boolean
 }
 
 export interface Student {
@@ -110,6 +119,10 @@ export interface Enrollment {
   purchasedAt: Timestamp
   expiresAt: Timestamp
   active: boolean
+  /** true = học sinh nghỉ ngang (đã đóng tiền nhưng tự ý nghỉ giữa chừng, không hoàn phí).
+   * Doanh thu của gói này sẽ KHÔNG được tính vào doanh thu hợp lệ khi tính lương % doanh thu.
+   * Chủ trung tâm/Quản lý tự đánh dấu thủ công, không tự động suy luận. */
+  droppedOut?: boolean
 }
 
 /** Derived/denormalized for fast reads: sum of (totalSessions - usedSessions) across active, non-expired enrollments for a student+class. */
@@ -158,6 +171,12 @@ export interface Payment {
   note?: string
   recordedBy: string
   recordedAt: Timestamp
+  /** Lớp mà khoản thanh toán này áp dụng — bắt buộc với document mới, để tính đúng doanh thu theo từng lớp/tháng cho payroll.
+   * Document payments cũ có thể không có field này — code đọc phải xử lý undefined. */
+  classId?: string
+  /** Tháng học phí này áp dụng, dạng "YYYY-MM" — KHÔNG PHẢI tháng ghi nhận thanh toán
+   * (VD thu nợ tháng 8 vào tháng 9 thì forMonth vẫn là "2026-08"). Document payments cũ có thể undefined. */
+  forMonth?: string
 }
 
 export interface TeacherAttendanceRecord {
@@ -182,4 +201,7 @@ export interface Payroll {
   ratePerSession: number
   total: number
   generatedAt: Timestamp
+  bonusAmount?: number
+  bonusReason?: string
 }
+
