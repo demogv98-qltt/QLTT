@@ -10,3 +10,6 @@ pubsub-debug.log
 # Service account keys - không commit credentials
 demo-script/serviceAccountKey.json
 **/serviceAccountKey.json
+
+# Script tạo dữ liệu demo — dùng 1 lần tại chỗ, không phải code sản phẩm
+demo-script/

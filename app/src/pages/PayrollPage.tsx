@@ -44,6 +44,11 @@ interface ClassPayEntry {
   revenuePercentage?: number
   standardSessionsPerMonth?: number
   subtotal: number
+  /** true khi lớp này khoán % doanh thu VÀ có cả giáo viên chính lẫn trợ giảng — mỗi người
+   * đang được tính riêng revenuePercentage% (VD 20%) trên CÙNG doanh thu, nên tổng chi lương
+   * của lớp là 2×revenuePercentage%, không phải revenuePercentage% như thầy có thể tưởng.
+   * Cần thầy xác nhận đây có đúng ý muốn không (chia % hay mỗi người 1 mức riêng). */
+  sharedPayout?: boolean
 }
 
 interface StaffPayrollItem {
@@ -153,11 +158,19 @@ export function PayrollPage() {
         const en = enrollmentMap.get(p.enrollmentId)
         if (en?.droppedOut) dropped = true
       } else {
-        // Không có enrollmentId — tìm enrollment active nhất của student trong lớp đó
-        const match = allEnrollments.find(
+        // Không có enrollmentId — một học sinh có thể có NHIỀU enrollment cho cùng
+        // lớp qua các tháng khác nhau (gói học lại theo tháng), nên phải khớp đúng
+        // enrollment mua trong đúng tháng `forMonth` của payment, không lấy đại cái đầu tiên.
+        const candidates = allEnrollments.filter(
           (e) => e.studentId === p.studentId && e.classId === p.classId,
         )
-        if (match?.droppedOut) dropped = true
+        const sameMonth = candidates.find((e) => {
+          const d = e.purchasedAt?.toDate ? e.purchasedAt.toDate() : null
+          if (!d) return false
+          const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          return ym === p.forMonth
+        })
+        if (sameMonth?.droppedOut) dropped = true
       }
       if (!dropped) {
         const key = `${p.classId}_${p.forMonth}`
@@ -252,6 +265,7 @@ export function PayrollPage() {
           const subtotal = stdSessions > 0
             ? Math.round((validRevenue * pct) / 100 / stdSessions * realSessionsCount)
             : 0
+          const sharedPayout = !!cls.teacherId && !!cls.taIds && cls.taIds.length > 0
           classEntries.push({
             classId: cid,
             className: cls.name,
@@ -261,6 +275,7 @@ export function PayrollPage() {
             revenuePercentage: pct,
             standardSessionsPerMonth: stdSessions,
             subtotal,
+            sharedPayout,
           })
           totalFromClasses += subtotal
         } else {
@@ -522,6 +537,14 @@ export function PayrollPage() {
                               <span className="text-xs text-slate-600 truncate max-w-[120px]">
                                 {entry.className}
                               </span>
+                              {entry.sharedPayout && (
+                                <span
+                                  className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700 border border-red-200"
+                                  title="Lớp này có cả GV chính và TG cùng khoán % — mỗi người đang nhận riêng % này trên cùng doanh thu, tổng chi có thể gấp đôi dự kiến. Vào Lớp học để xem lại."
+                                >
+                                  ⚠ 2 người cùng %
+                                </span>
+                              )}
                             </div>
                           ))}
                           {/* Ô nhập đơn giá — chỉ hiện khi có ít nhất 1 lớp cố định */}
@@ -691,11 +714,21 @@ export function PayrollPage() {
                       </span>
                     </div>
                     {entry.salaryMode === 'percentage_revenue' ? (
-                      <p className="text-slate-500">
-                        {entry.sessionsCount} buổi thực dạy · DT hợp lệ: {formatVND(entry.validRevenue ?? 0)}{' '}
-                        × {entry.revenuePercentage}% ÷ {entry.standardSessionsPerMonth} buổi chuẩn ={' '}
-                        <strong className="text-emerald-700">{formatVND(entry.subtotal)}</strong>
-                      </p>
+                      <>
+                        <p className="text-slate-500">
+                          {entry.sessionsCount} buổi thực dạy · DT hợp lệ: {formatVND(entry.validRevenue ?? 0)}{' '}
+                          × {entry.revenuePercentage}% ÷ {entry.standardSessionsPerMonth} buổi chuẩn ={' '}
+                          <strong className="text-emerald-700">{formatVND(entry.subtotal)}</strong>
+                        </p>
+                        {entry.sharedPayout && (
+                          <p className="mt-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-700">
+                            ⚠ Lớp này có cả GV chính và trợ giảng, cả hai đang cùng được tính{' '}
+                            {entry.revenuePercentage}% doanh thu riêng — tổng chi lương của lớp là{' '}
+                            {(entry.revenuePercentage ?? 0) * 2}%, không phải {entry.revenuePercentage}%. Nếu
+                            không đúng ý thầy, vào trang Lớp học để chỉnh lại % cho từng người.
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <p className="text-slate-500">
                         {entry.sessionsCount} ca × {formatVND(entry.rate ?? 0)} ={' '}

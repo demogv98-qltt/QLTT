@@ -412,10 +412,33 @@ export function AttendancePage() {
     [attendanceRecords],
   )
 
-  // Lấy attendance buổi trước để cảnh báo vắng liên tiếp
-  // (chỉ load khi cần — load attendances theo classId + studentId sẽ tốn read, dùng clientside filter từ attendanceRecords hiện có)
-  // Đơn giản hoá: cảnh báo "vắng liên tiếp" dựa vào attendanceRecords của buổi hiện tại + 1 query phụ
-  // Để giữ không tốn thêm read, ta dùng local state sau khi đã có roster & attendanceRecords.
+  // Toàn bộ lịch sử điểm danh của lớp này (mọi buổi) — dùng để tìm đúng trạng thái của
+  // "buổi liền trước" cho cảnh báo nguy cơ thôi học bên dưới, thay vì chỉ nhìn buổi hiện tại.
+  const { data: classAttendanceHistory } = useCollection<Attendance>(
+    () =>
+      classId && selectedCenterId && profile
+        ? query(
+            collection(db, 'attendance'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            where('classId', '==', classId),
+          )
+        : null,
+    [classId, selectedCenterId, profile],
+  )
+  // Với mỗi học sinh: trạng thái của buổi gần nhất TRƯỚC ngày đang xem (không tính buổi hiện tại).
+  const previousStatusByStudent = useMemo(() => {
+    const latestBefore: Record<string, { recordedAtMs: number; status: AttendanceStatus }> = {}
+    for (const a of classAttendanceHistory) {
+      if (a.sessionId === sessionId) continue // bỏ qua buổi đang xem
+      const ms = a.recordedAt?.toDate ? a.recordedAt.toDate().getTime() : 0
+      const cur = latestBefore[a.studentId]
+      if (!cur || ms > cur.recordedAtMs) {
+        latestBefore[a.studentId] = { recordedAtMs: ms, status: a.status }
+      }
+    }
+    return Object.fromEntries(Object.entries(latestBefore).map(([id, v]) => [id, v.status]))
+  }, [classAttendanceHistory, sessionId])
 
   // Get-or-create the concrete session doc for this class+date
   useEffect(() => {
@@ -693,19 +716,11 @@ export function AttendancePage() {
               const recorded = attendanceByStudent[studentId]
               const studentObj = studentMap.get(studentId)
 
-              // Cảnh báo nguy cơ thôi học: vắng không phép buổi này VÀ buổi trước (chưa điểm danh = coi là vắng)
-              // Đơn giản: nếu chưa có record = vắng, và trước đó cũng vắng.
-              // Để không phải query thêm, ta dùng heuristic: nếu học sinh hiện tại trong danh sách absent
-              // và đã từng có status unexcused_absence trong attendanceRecords hiện tại (buổi đang xem)
-              // thì hiển thị cảnh báo (logic đơn giản hoá - xem comment bên dưới)
-              const isCurrentlyAbsent =
-                !recorded || recorded.status === 'excused_absence' || recorded.status === 'unexcused_absence'
-
-              // Kiểm tra "buổi liền trước cũng vắng không phép" — để tránh tải thêm data,
-              // ta chỉ cảnh báo khi buổi hiện tại đã có record unexcused_absence (đã ghi rõ vắng không phép)
-              // Đây là cách giản dị nhất không cần query thêm.
-              const isPreviousAbsent = recorded?.status === 'unexcused_absence'
-              const showRiskAlert = isCurrentlyAbsent && isPreviousAbsent
+              // Cảnh báo nguy cơ thôi học: buổi này vắng không phép, VÀ buổi liền trước (khác
+              // ngày, tra từ classAttendanceHistory) cũng đã là vắng không phép.
+              const isCurrentUnexcused = recorded?.status === 'unexcused_absence'
+              const isPreviousUnexcused = previousStatusByStudent[studentId] === 'unexcused_absence'
+              const showRiskAlert = isCurrentUnexcused && isPreviousUnexcused
 
               const cleanPhone = (studentObj?.parentPhone || studentObj?.phone || '').replace(/\D/g, '')
 

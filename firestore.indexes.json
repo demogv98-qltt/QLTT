@@ -167,6 +167,15 @@
         { "fieldPath": "classId", "order": "ASCENDING" },
         { "fieldPath": "forMonth", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "attendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "centerId", "order": "ASCENDING" },
+        { "fieldPath": "classId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
