@@ -245,14 +245,20 @@ export function PayrollPage() {
         savedDoc?.bonusReason ??
         ''
 
-      // Nhóm sessions theo lớp
+      // Nhóm sessions theo lớp — dùng ĐÚNG phân công đã "chụp lại" trên từng buổi
+      // (sess.teacherId/taIds), không tra theo phân công HIỆN TẠI của lớp (cls.teacherId).
+      // Nếu 1 lớp đổi GV/TG giữa tháng mà tra theo lớp hiện tại, buổi cũ (trước khi đổi) sẽ bị
+      // gán nhầm cho người mới. Buổi cũ trước khi field này tồn tại (không có sess.teacherId)
+      // mới rơi về dùng phân công hiện tại của lớp như hành vi cũ.
       const sessionsByClass: Record<string, ClassSession[]> = {}
       for (const sess of monthSessions) {
         if (sess.status === 'canceled') continue
         const cls = classMap.get(sess.classId)
         if (!cls) continue
-        const isTeacher = cls.teacherId === staff.id
-        const isTa = cls.taIds?.includes(staff.id)
+        const sessTeacherId = sess.teacherId ?? cls.teacherId
+        const sessTaIds = sess.taIds ?? cls.taIds
+        const isTeacher = sessTeacherId === staff.id
+        const isTa = sessTaIds?.includes(staff.id)
         if (!isTeacher && !isTa) continue
         if (!sessionsByClass[sess.classId]) sessionsByClass[sess.classId] = []
         sessionsByClass[sess.classId].push(sess)
@@ -271,21 +277,21 @@ export function PayrollPage() {
           staffSessions.push({ session: s, className: cls.name })
         }
 
+        // Tách theo ĐÚNG vai trò đã "chụp lại" trên từng buổi — trường hợp hiếm nhưng có thể
+        // xảy ra khi luân chuyển: 1 người là GV chính ở vài buổi đầu tháng, rồi đổi sang làm
+        // trợ giảng (hoặc ngược lại) cho CÙNG lớp đó ngay trong tháng.
+        const teacherSessions = sessions.filter((s) => (s.teacherId ?? cls.teacherId) === staff.id)
+        const taSessions = sessions.filter((s) => (s.taIds ?? cls.taIds)?.includes(staff.id))
+
         // Khoán % doanh thu chỉ áp dụng cho giáo viên chính của lớp. Trợ giảng luôn được trả
         // cố định theo ca (kể cả ở lớp đang khoán % cho giáo viên) — đây là chính sách của
         // trung tâm, không phải lựa chọn kỹ thuật: 1 lớp khoán % không có nghĩa cả GV và TG
         // đều nhận % (sẽ thành 2 lần), mà chỉ GV nhận %, TG vẫn ăn lương ca như bình thường.
-        const isTeacherOfClass = cls.teacherId === staff.id
-        const mode = cls.salaryMode === 'percentage_revenue' && isTeacherOfClass
-          ? 'percentage_revenue'
-          : 'fixed_per_session'
-
-        // Chỉ tính những buổi người này thực sự có mặt (chấm công) — buổi chưa ai chấm công
-        // thì mặc định coi như có mặt, giữ hành vi hợp lý khi quản lý chưa kịp chấm công.
-        const attendedSessions = sessions.filter((s) => wasPresent(s.id, staff.id))
-
-        if (mode === 'percentage_revenue') {
-          const realSessionsCount = attendedSessions.length
+        if (cls.salaryMode === 'percentage_revenue' && teacherSessions.length > 0) {
+          // Chỉ tính buổi thực sự có mặt (chấm công) — buổi chưa ai chấm công thì mặc định
+          // coi như có mặt, giữ hành vi hợp lý khi quản lý chưa kịp chấm công.
+          const attended = teacherSessions.filter((s) => wasPresent(s.id, staff.id))
+          const realSessionsCount = attended.length
           const pct = cls.revenuePercentage ?? 20
           const stdSessions = cls.standardSessionsPerMonth ?? 8
           const validRevenue = validRevenueByClassMonth[`${cid}_${month}`] ?? 0
@@ -303,19 +309,32 @@ export function PayrollPage() {
             subtotal,
           })
           totalFromClasses += subtotal
-        } else {
-          // Cố định/ca (logic cũ)
-          const defaultRate = staff.role === 'teacher' ? DEFAULT_TEACHER_RATE : DEFAULT_TA_RATE
-          const rate =
-            customRates[staff.id] ??
-            savedDoc?.ratePerSession ??
-            defaultRate
-          const subtotal = attendedSessions.length * rate
+        } else if (teacherSessions.length > 0) {
+          // Lớp cố định/ca, và buổi này người này là GV chính.
+          const attended = teacherSessions.filter((s) => wasPresent(s.id, staff.id))
+          const rate = customRates[staff.id] ?? savedDoc?.ratePerSession ?? DEFAULT_TEACHER_RATE
+          const subtotal = attended.length * rate
           classEntries.push({
             classId: cid,
             className: cls.name,
             salaryMode: 'fixed_per_session',
-            sessionsCount: attendedSessions.length,
+            sessionsCount: attended.length,
+            rate,
+            subtotal,
+          })
+          totalFromClasses += subtotal
+        }
+
+        if (taSessions.length > 0) {
+          // Buổi này người này là trợ giảng — luôn cố định/ca, không liên quan salaryMode của lớp.
+          const attended = taSessions.filter((s) => wasPresent(s.id, staff.id))
+          const rate = customRates[staff.id] ?? savedDoc?.ratePerSession ?? DEFAULT_TA_RATE
+          const subtotal = attended.length * rate
+          classEntries.push({
+            classId: cid,
+            className: cls.name,
+            salaryMode: 'fixed_per_session',
+            sessionsCount: attended.length,
             rate,
             subtotal,
           })

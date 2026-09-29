@@ -516,6 +516,9 @@ export function AttendancePage() {
       const ref = doc(db, 'classSessions', `${classId}_${date}`)
       const snap = await getDoc(ref)
       if (!snap.exists()) {
+        // Chụp lại đúng GV chính/trợ giảng của lớp NGAY TẠI THỜI ĐIỂM buổi học này được tạo —
+        // không được để PayrollPage tự tra lại classes.teacherId/taIds hiện tại, vì nếu lớp đổi
+        // GV/TG giữa tháng, mọi buổi cũ sẽ bị tính nhầm sang người mới (xem PayrollPage.tsx).
         await setDoc(ref, {
           orgId: profile.orgId,
           centerId: selectedCenterId,
@@ -525,6 +528,8 @@ export function AttendancePage() {
           endTime: todaysSlot?.endTime ?? '',
           status: 'scheduled',
           createdAt: serverTimestamp(),
+          teacherId: selectedClass?.teacherId ?? '',
+          taIds: selectedClass?.taIds ?? [],
         })
       }
       if (!cancelled) {
@@ -535,7 +540,7 @@ export function AttendancePage() {
     return () => {
       cancelled = true
     }
-  }, [classId, date, selectedCenterId, profile, todaysSlot])
+  }, [classId, date, selectedCenterId, profile, todaysSlot, selectedClass])
 
   // Tính canShowUpdateTab: startTime + 15 phút đã qua chưa?
   const canShowUpdateTab = useMemo(() => {

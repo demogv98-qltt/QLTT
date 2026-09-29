@@ -83,6 +83,14 @@ export interface ClassSession {
   endTime: string
   status: SessionStatus
   createdAt: Timestamp
+  /** "Chụp lại" đúng GV chính/trợ giảng của lớp tại thời điểm buổi học này được tạo (lần đầu mở
+   * trang Điểm danh cho ngày đó) — KHÔNG lấy động từ classes.teacherId/taIds hiện tại. Nếu
+   * không có (document cũ trước khi field này tồn tại), PayrollPage.tsx sẽ tự rơi về dùng phân
+   * công hiện tại của lớp như hành vi cũ. Lý do bắt buộc phải "chụp lại": nếu 1 lớp đổi GV/TG
+   * giữa tháng mà không lưu lại, tính lương sẽ gán NHẦM toàn bộ buổi cũ (trước khi đổi) cho
+   * người mới, người cũ mất hết công — xem PayrollPage.tsx. */
+  teacherId?: string
+  taIds?: string[]
 }
 
 export interface Student {
