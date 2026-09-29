@@ -1,4 +1,4 @@
-import { collection, query, updateDoc, doc, where } from 'firebase/firestore'
+import { collection, query, updateDoc, doc, where, writeBatch, serverTimestamp } from 'firebase/firestore'
 import { useMemo, useState } from 'react'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
@@ -15,6 +15,7 @@ import {
   Phone,
   MessageCircle,
   AlertTriangle,
+  ArrowRightLeft,
 } from 'lucide-react'
 import type { Attendance, AttendanceStatus, ClassGroup, Enrollment, Payment, Student } from '../types'
 
@@ -44,6 +45,8 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
   const [activeTab, setActiveTab] = useState<'progress' | 'attendance' | 'payments'>('progress')
   const [showQRCard, setShowQRCard] = useState(false)
   const manage = canManage(profile?.role)
+  const [transferringId, setTransferringId] = useState<string | null>(null)
+  const [transferTargetByEnrollment, setTransferTargetByEnrollment] = useState<Record<string, string>>({})
 
   const studentCenter = centers.find((c) => c.id === student?.centerId)
 
@@ -101,6 +104,10 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
     [profile],
   )
   const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes])
+  const classesInSameCenter = useMemo(
+    () => classes.filter((c) => c.centerId === student?.centerId && c.active),
+    [classes, student],
+  )
 
   // Calculations
   const totalPurchasedSessions = enrollments.reduce((sum, e) => sum + e.totalSessions, 0)
@@ -149,6 +156,51 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
     )
       return
     await updateDoc(doc(db, 'enrollments', enrollmentId), { droppedOut: newValue })
+  }
+
+  async function handleTransferClass(enrollment: Enrollment, newClassId: string) {
+    if (!profile || !student || !newClassId || newClassId === enrollment.classId) return
+    const newClass = classMap.get(newClassId)
+    if (
+      !window.confirm(
+        `Chuyển ${student.fullName} sang lớp "${newClass?.name ?? newClassId}"?\n` +
+          `Buổi học còn lại (${enrollment.remainingSessions} buổi) sẽ được giữ nguyên và chuyển sang gói mới ở lớp mới.\n` +
+          `Lịch sử điểm danh/thanh toán ở lớp cũ vẫn được giữ nguyên, không bị xóa.`,
+      )
+    )
+      return
+    setTransferringId(enrollment.id)
+    try {
+      const batch = writeBatch(db)
+      // Gói cũ: ngưng hoạt động, không xóa — giữ nguyên lịch sử.
+      batch.update(doc(db, 'enrollments', enrollment.id), { active: false })
+      // Gói mới ở lớp mới: mang theo đúng số buổi CÒN LẠI (chưa dùng), không tính lại tiền,
+      // không tự ý gia hạn ngày hết hạn.
+      const newEnrollmentRef = doc(collection(db, 'enrollments'))
+      batch.set(newEnrollmentRef, {
+        orgId: profile.orgId,
+        studentId: enrollment.studentId,
+        classId: newClassId,
+        centerId: enrollment.centerId,
+        packageType: enrollment.packageType,
+        totalSessions: enrollment.remainingSessions,
+        usedSessions: 0,
+        remainingSessions: enrollment.remainingSessions,
+        pricePerSession: enrollment.pricePerSession,
+        totalPrice: enrollment.remainingSessions * enrollment.pricePerSession,
+        purchasedAt: serverTimestamp(),
+        expiresAt: enrollment.expiresAt,
+        active: true,
+      })
+      await batch.commit()
+    } finally {
+      setTransferringId(null)
+      setTransferTargetByEnrollment((prev) => {
+        const next = { ...prev }
+        delete next[enrollment.id]
+        return next
+      })
+    }
   }
 
   return (
@@ -393,6 +445,43 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
                             >
                               {en.droppedOut ? 'Bỏ đánh dấu' : 'Đánh dấu nghỉ ngang (không hoàn phí)'}
                             </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Chuyển lớp — chỉ owner/manager, chỉ gói đang hoạt động */}
+                      {manage && en.active && (
+                        <div className="pt-1 border-t border-slate-100">
+                          {transferringId === en.id ? (
+                            <p className="text-[11px] text-slate-400">Đang chuyển lớp...</p>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <ArrowRightLeft className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <select
+                                value={transferTargetByEnrollment[en.id] ?? ''}
+                                onChange={(e) =>
+                                  setTransferTargetByEnrollment((prev) => ({ ...prev, [en.id]: e.target.value }))
+                                }
+                                className="rounded-md border border-slate-200 px-2 py-1 text-[11px]"
+                              >
+                                <option value="">Chuyển sang lớp khác...</option>
+                                {classesInSameCenter
+                                  .filter((c) => c.id !== en.classId)
+                                  .map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name}
+                                    </option>
+                                  ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={!transferTargetByEnrollment[en.id]}
+                                onClick={() => handleTransferClass(en, transferTargetByEnrollment[en.id])}
+                                className="rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 border border-indigo-200 hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Xác nhận chuyển
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
