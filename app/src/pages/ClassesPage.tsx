@@ -302,6 +302,10 @@ export function ClassesPage() {
                 <p className="text-[11px] text-slate-500 max-w-xs">
                   Công thức: (Doanh thu hợp lệ × {revenuePercentage}% ÷ {standardSessionsPerMonth} buổi chuẩn) × Số buổi thực dạy
                 </p>
+                <p className="text-[11px] text-amber-700 max-w-xs">
+                  Chỉ áp dụng cho giáo viên chính. Trợ giảng của lớp này vẫn được trả cố định theo
+                  ca như bình thường, không tính theo %.
+                </p>
               </div>
             )}
           </div>
