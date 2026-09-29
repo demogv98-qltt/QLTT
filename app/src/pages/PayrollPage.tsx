@@ -26,7 +26,7 @@ import {
   Eye,
   Users,
 } from 'lucide-react'
-import type { AppUser, ClassGroup, ClassSession, Enrollment, Payment, Payroll } from '../types'
+import type { AppUser, ClassGroup, ClassSession, Enrollment, Payment, Payroll, TeacherAttendanceRecord } from '../types'
 
 const DEFAULT_TEACHER_RATE = 200000 // 200k/ca
 const DEFAULT_TA_RATE = 70000 // 70k/ca — trợ giảng luôn trả cố định theo ca, kể cả ở lớp khoán % doanh thu
@@ -139,6 +139,29 @@ export function PayrollPage() {
     () => new Map(allEnrollments.map((e) => [e.id, e])),
     [allEnrollments],
   )
+
+  // Chấm công GV/TG — quyết định buổi nào tính lương cho người nào (cả 2 chế độ lương).
+  const { data: teacherAttendanceRecords } = useCollection<TeacherAttendanceRecord>(
+    () =>
+      selectedCenterId && profile
+        ? query(
+            collection(db, 'teacherAttendance'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+          )
+        : null,
+    [selectedCenterId, profile],
+  )
+  // key: `${sessionId}_${staffId}` → confirmed (có mặt hay không)
+  const attendanceBySessionStaff = useMemo(
+    () => new Map(teacherAttendanceRecords.map((r) => [`${r.sessionId}_${r.staffId}`, r.confirmed])),
+    [teacherAttendanceRecords],
+  )
+  // Buổi chưa chấm công = mặc định coi như có mặt (giữ hành vi cũ khi chưa ai chấm công).
+  function wasPresent(sessionId: string, staffId: string): boolean {
+    const recorded = attendanceBySessionStaff.get(`${sessionId}_${staffId}`)
+    return recorded ?? true
+  }
 
   // Tính doanh thu hợp lệ theo lớp + tháng (loại payment của enrollment droppedOut)
   const validRevenueByClassMonth = useMemo(() => {
@@ -257,10 +280,12 @@ export function PayrollPage() {
           ? 'percentage_revenue'
           : 'fixed_per_session'
 
+        // Chỉ tính những buổi người này thực sự có mặt (chấm công) — buổi chưa ai chấm công
+        // thì mặc định coi như có mặt, giữ hành vi hợp lý khi quản lý chưa kịp chấm công.
+        const attendedSessions = sessions.filter((s) => wasPresent(s.id, staff.id))
+
         if (mode === 'percentage_revenue') {
-          // Đếm buổi thực dạy (bỏ qua teacherAbsent)
-          const realSessions = sessions.filter((s) => !s.teacherAbsent)
-          const realSessionsCount = realSessions.length
+          const realSessionsCount = attendedSessions.length
           const pct = cls.revenuePercentage ?? 20
           const stdSessions = cls.standardSessionsPerMonth ?? 8
           const validRevenue = validRevenueByClassMonth[`${cid}_${month}`] ?? 0
@@ -285,12 +310,12 @@ export function PayrollPage() {
             customRates[staff.id] ??
             savedDoc?.ratePerSession ??
             defaultRate
-          const subtotal = sessions.length * rate
+          const subtotal = attendedSessions.length * rate
           classEntries.push({
             classId: cid,
             className: cls.name,
             salaryMode: 'fixed_per_session',
-            sessionsCount: sessions.length,
+            sessionsCount: attendedSessions.length,
             rate,
             subtotal,
           })
@@ -308,7 +333,8 @@ export function PayrollPage() {
         defaultRate
 
       const total = totalFromClasses + bonus
-      const sessionsCount = staffSessions.length
+      // Tổng số ca ĐÃ chấm công có mặt (không tính buổi vắng) — khớp với số ca dùng để tính lương.
+      const sessionsCount = classEntries.reduce((sum, e) => sum + e.sessionsCount, 0)
 
       return {
         user: staff,
@@ -744,9 +770,9 @@ export function PayrollPage() {
                       <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 text-[10px]">
                         Hoàn thành
                       </span>
-                      {item.session.teacherAbsent && (
+                      {!wasPresent(item.session.id, selectedStaffForDetail.user.id) && (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-amber-700 text-[10px]">
-                          GV vắng
+                          Vắng buổi này
                         </span>
                       )}
                     </div>

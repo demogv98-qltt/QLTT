@@ -6,7 +6,6 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 import html2canvas from 'html2canvas'
@@ -16,6 +15,7 @@ import { db } from '../lib/firebase'
 import { studentAvatar } from '../lib/avatar'
 import { applyAttendanceCredit } from '../lib/creditDeduction'
 import { useCollection } from '../lib/useCollection'
+import { useStaffOfCenter } from '../lib/useStaff'
 import { todayISODate, weekdayOf } from '../lib/schedule'
 import { useAuthStore } from '../stores/authStore'
 import { useCenterStore } from '../stores/centerStore'
@@ -37,7 +37,14 @@ import {
   Phone,
   AlertTriangle,
 } from 'lucide-react'
-import type { Attendance, AttendanceStatus, ClassGroup, ClassSession, Enrollment, Student } from '../types'
+import type {
+  Attendance,
+  AttendanceStatus,
+  ClassGroup,
+  Enrollment,
+  Student,
+  TeacherAttendanceRecord,
+} from '../types'
 
 const STATUS_LABELS: Record<AttendanceStatus, string> = {
   present: 'Có mặt',
@@ -339,7 +346,6 @@ export function AttendancePage() {
   const [date, setDate] = useState(() => paramDate || todayISODate())
   const [classId, setClassId] = useState(() => paramClassId || '')
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [sessionDoc, setSessionDoc] = useState<ClassSession | null>(null)
   const [creatingSession, setCreatingSession] = useState(false)
 
   // QR scanner & student card modals
@@ -362,6 +368,66 @@ export function AttendancePage() {
 
   const selectedClass = classes.find((c) => c.id === classId) ?? null
   const todaysSlot = selectedClass?.schedule.find((s) => s.weekday === weekdayOf(date))
+
+  // Chấm công GV/Trợ giảng — chỉ owner/manager mới thấy/sửa được (xem firestore.rules).
+  const { teachers: centerTeachers, tas: centerTas } = useStaffOfCenter(
+    manage ? profile?.orgId : undefined,
+    selectedCenterId,
+  )
+  const staffNameMap = useMemo(
+    () => new Map([...centerTeachers, ...centerTas].map((u) => [u.id, u.displayName])),
+    [centerTeachers, centerTas],
+  )
+  const assignedStaff = useMemo(() => {
+    if (!selectedClass) return []
+    const list: { id: string; role: 'teacher' | 'ta'; name: string }[] = []
+    if (selectedClass.teacherId) {
+      list.push({
+        id: selectedClass.teacherId,
+        role: 'teacher',
+        name: staffNameMap.get(selectedClass.teacherId) ?? 'Giáo viên',
+      })
+    }
+    for (const taId of selectedClass.taIds ?? []) {
+      list.push({ id: taId, role: 'ta', name: staffNameMap.get(taId) ?? 'Trợ giảng' })
+    }
+    return list
+  }, [selectedClass, staffNameMap])
+
+  const { data: teacherAttendanceRecords } = useCollection<TeacherAttendanceRecord>(
+    () =>
+      sessionId && selectedCenterId && profile && manage
+        ? query(
+            collection(db, 'teacherAttendance'),
+            where('orgId', '==', profile.orgId),
+            where('centerId', '==', selectedCenterId),
+            where('sessionId', '==', sessionId),
+          )
+        : null,
+    [sessionId, selectedCenterId, profile, manage],
+  )
+  const teacherAttendanceByStaff = useMemo(
+    () => new Map(teacherAttendanceRecords.map((r) => [r.staffId, r.confirmed])),
+    [teacherAttendanceRecords],
+  )
+
+  async function handleStaffAttendance(staffId: string, role: 'teacher' | 'ta', present: boolean) {
+    if (!sessionId || !classId || !selectedCenterId || !profile) return
+    await setDoc(
+      doc(db, 'teacherAttendance', `${sessionId}_${staffId}`),
+      {
+        orgId: profile.orgId,
+        sessionId,
+        classId,
+        centerId: selectedCenterId,
+        staffId,
+        staffRole: role,
+        confirmed: present,
+        confirmedAt: serverTimestamp(),
+      },
+      { merge: true },
+    )
+  }
 
   const { data: enrollments } = useCollection<Enrollment>(
     () =>
@@ -443,7 +509,6 @@ export function AttendancePage() {
   // Get-or-create the concrete session doc for this class+date
   useEffect(() => {
     setSessionId(null)
-    setSessionDoc(null)
     if (!classId || !selectedCenterId || !profile) return
     let cancelled = false
     setCreatingSession(true)
@@ -461,10 +526,6 @@ export function AttendancePage() {
           status: 'scheduled',
           createdAt: serverTimestamp(),
         })
-        const snap2 = await getDoc(ref)
-        if (!cancelled) setSessionDoc(snap2.data() as ClassSession)
-      } else {
-        if (!cancelled) setSessionDoc(snap.data() as ClassSession)
       }
       if (!cancelled) {
         setSessionId(ref.id)
@@ -531,14 +592,6 @@ export function AttendancePage() {
       centerId: selectedCenterId,
       status,
     })
-  }
-
-  // Đánh dấu giáo viên vắng buổi này
-  async function handleTeacherAbsent(absent: boolean) {
-    if (!sessionId) return
-    const ref = doc(db, 'classSessions', sessionId)
-    await updateDoc(ref, { teacherAbsent: absent })
-    setSessionDoc((prev) => (prev ? { ...prev, teacherAbsent: absent } : prev))
   }
 
   // QR Code scan processing
@@ -667,21 +720,49 @@ export function AttendancePage() {
           )}
         </div>
 
-        {/* Checkbox "Giáo viên không có mặt" — chỉ owner/manager thấy */}
-        {manage && sessionId && (
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={!!sessionDoc?.teacherAbsent}
-                onChange={(e) => handleTeacherAbsent(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 accent-amber-500"
-              />
-              <span className="text-xs font-semibold text-amber-800">
-                Giáo viên / Trợ giảng KHÔNG có mặt dạy buổi này{' '}
-                <span className="text-amber-600 font-normal">(dùng để tính lương khoán % doanh thu)</span>
-              </span>
-            </label>
+        {/* Chấm công GV/Trợ giảng của buổi này — chỉ owner/manager thấy/sửa được */}
+        {manage && sessionId && assignedStaff.length > 0 && (
+          <div className="space-y-1.5 pt-2 border-t border-slate-100">
+            <p className="text-xs font-semibold text-slate-700">
+              Chấm công buổi này{' '}
+              <span className="font-normal text-slate-400">(dùng để tính lương)</span>
+            </p>
+            {assignedStaff.map((s) => {
+              const recorded = teacherAttendanceByStaff.get(s.id)
+              const present = recorded ?? true // chưa chấm công = mặc định coi như có mặt
+              return (
+                <div key={s.id} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-slate-700">
+                    {s.name}{' '}
+                    <span className="text-slate-400">({s.role === 'teacher' ? 'GV chính' : 'Trợ giảng'})</span>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleStaffAttendance(s.id, s.role, true)}
+                      className={`rounded-md px-2 py-1 font-semibold transition-colors ${
+                        present
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      Có mặt
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStaffAttendance(s.id, s.role, false)}
+                      className={`rounded-md px-2 py-1 font-semibold transition-colors ${
+                        !present
+                          ? 'bg-red-100 text-red-700 border border-red-200'
+                          : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      Vắng
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

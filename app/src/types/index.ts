@@ -83,9 +83,6 @@ export interface ClassSession {
   endTime: string
   status: SessionStatus
   createdAt: Timestamp
-  /** true = giáo viên/trợ giảng chính KHÔNG có mặt dạy buổi này (dù lớp vẫn diễn ra, VD có người dạy thay).
-   * Dùng để trừ buổi khi tính lương % doanh thu. Mặc định/không set = giáo viên có dạy. */
-  teacherAbsent?: boolean
 }
 
 export interface Student {
@@ -179,6 +176,10 @@ export interface Payment {
   forMonth?: string
 }
 
+/** Chấm công GV/Trợ giảng cho 1 buổi học cụ thể — id tài liệu = `${sessionId}_${staffId}`.
+ * Chỉ chủ/quản lý được ghi (xem firestore.rules): field `confirmed` (có mặt hay không) quyết
+ * định trực tiếp buổi đó có tính lương cho người này hay không (PayrollPage.tsx), nên không để
+ * GV/TG tự chấm công cho chính mình. Chưa có bản ghi cho 1 buổi = mặc định coi như có mặt. */
 export interface TeacherAttendanceRecord {
   id: string
   orgId: string

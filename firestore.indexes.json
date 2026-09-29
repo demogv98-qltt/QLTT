@@ -176,6 +176,23 @@
         { "fieldPath": "centerId", "order": "ASCENDING" },
         { "fieldPath": "classId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "teacherAttendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "centerId", "order": "ASCENDING" },
+        { "fieldPath": "sessionId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "teacherAttendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "centerId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

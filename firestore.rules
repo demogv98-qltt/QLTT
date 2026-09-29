@@ -159,18 +159,10 @@ service cloud.firestore {
       // teachers/TAs open Attendance and get-or-create it on the fly.
       allow create: if isStaffOfCenter(request.resource.data.centerId) &&
         request.resource.data.orgId == myOrgId() && orgActive();
-      // orgId/centerId pinned on update — see the `centers` rule above. `teacherAbsent`
-      // directly affects the reporting staff member's own pay under percentage_revenue
-      // payroll (see PayrollPage.tsx) — self-reporting it would let a teacher/TA mark
-      // themselves as never absent, so only owner/manager may touch that one field; every
-      // other field on this doc stays open to any staff of the center as before.
+      // orgId/centerId pinned on update — see the `centers` rule above.
       allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive() &&
         request.resource.data.orgId == resource.data.orgId &&
-        request.resource.data.centerId == resource.data.centerId &&
-        (
-          isOwnerOrManager() ||
-          !('teacherAbsent' in request.resource.data.diff(resource.data).affectedKeys())
-        );
+        request.resource.data.centerId == resource.data.centerId;
       allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive();
     }
 
@@ -259,16 +251,16 @@ service cloud.firestore {
       allow update, delete: if isOwner() && resource.data.orgId == myOrgId() && orgActive();
     }
 
-    // --- Teacher/TA session confirmation ---
+    // --- Chấm công GV/Trợ giảng theo từng buổi học ---
+    // `confirmed` (có mặt/vắng) quyết định trực tiếp buổi đó có tính lương cho người đó hay
+    // không (cả 2 chế độ lương — xem PayrollPage.tsx) — nên CHỈ chủ/quản lý được ghi, không
+    // để GV/TG tự chấm công cho chính mình (tự khai "có mặt" để không bị trừ lương).
     match /teacherAttendance/{id} {
       allow read: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive();
-      // create/update used to be combined in one rule that read `resource.data.centerId` —
-      // `resource` is null on create (no document exists yet), so every create request threw
-      // and was denied. Split so create checks request.resource.data instead, and update
-      // additionally pins orgId/centerId to their existing values (see `centers` rule above).
-      allow create: if isStaffOfCenter(request.resource.data.centerId) &&
+      allow create: if isOwnerOrManager() && isStaffOfCenter(request.resource.data.centerId) &&
         request.resource.data.orgId == myOrgId() && orgActive();
-      allow update: if isStaffOfCenter(resource.data.centerId) && resource.data.orgId == myOrgId() && orgActive() &&
+      allow update: if isOwnerOrManager() && isStaffOfCenter(resource.data.centerId) &&
+        resource.data.orgId == myOrgId() && orgActive() &&
         request.resource.data.orgId == resource.data.orgId &&
         request.resource.data.centerId == resource.data.centerId;
       allow delete: if isOwnerOrManager() && resource.data.orgId == myOrgId() && orgActive();
