@@ -76,6 +76,10 @@ interface ZaloNoticeProps {
   // Snapshot đầu buổi (để tính "đã vào lớp sau khi tab bắt đầu")
   initialAbsents: Set<string>
   canShowUpdateTab: boolean
+  /** Số giây còn lại cho tới khi tab "Cập nhật 15 phút" tự mở khoá — null khi không có lịch
+   * hôm nay để tính mốc giờ. Dùng để hiện đồng hồ đếm ngược sống trên nút, thay vì chỉ 1 dòng
+   * chữ tĩnh "chưa tới giờ" không cho biết còn bao lâu. */
+  updateTabSecondsLeft: number | null
   orgName?: string
   centerName?: string
 }
@@ -97,6 +101,7 @@ function ZaloNoticePanel({
   attendanceByStudent,
   initialAbsents,
   canShowUpdateTab,
+  updateTabSecondsLeft,
   orgName,
   centerName,
 }: ZaloNoticeProps) {
@@ -240,7 +245,7 @@ function ZaloNoticePanel({
           type="button"
           onClick={() => canShowUpdateTab && setTab('update')}
           disabled={!canShowUpdateTab}
-          title={!canShowUpdateTab ? 'Chỉ hiện sau khi đã qua 15 phút kể từ giờ bắt đầu' : undefined}
+          title={!canShowUpdateTab ? 'Tự mở khoá sau khi qua 15 phút kể từ giờ bắt đầu' : undefined}
           className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
             tab === 'update'
               ? 'bg-indigo-600 text-white shadow-xs'
@@ -249,7 +254,13 @@ function ZaloNoticePanel({
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
           }`}
         >
-          🔄 Cập nhật 15 phút{!canShowUpdateTab && ' (chưa tới giờ)'}
+          🔄 Cập nhật 15 phút
+          {!canShowUpdateTab && updateTabSecondsLeft !== null && (
+            <span className="ml-1 font-mono tabular-nums">
+              ({String(Math.floor(updateTabSecondsLeft / 60)).padStart(2, '0')}:
+              {String(updateTabSecondsLeft % 60).padStart(2, '0')})
+            </span>
+          )}
         </button>
       </div>
 
@@ -542,15 +553,25 @@ export function AttendancePage() {
     }
   }, [classId, date, selectedCenterId, profile, todaysSlot, selectedClass])
 
+  // Đồng hồ chạy nền — Date.now() gọi 1 lần lúc render rồi đứng yên mãi (không có gì khiến
+  // component render lại), nên tab "Cập nhật 15 phút" không bao giờ tự sáng lên đúng lúc nếu
+  // thầy cứ đứng yên trên trang chờ — phải tick lại mỗi giây để ép tính lại canShowUpdateTab.
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
   // Tính canShowUpdateTab: startTime + 15 phút đã qua chưa?
-  const canShowUpdateTab = useMemo(() => {
-    if (!todaysSlot?.startTime || !date) return false
+  const updateTabUnlockAt = useMemo(() => {
+    if (!todaysSlot?.startTime || !date) return null
     const [h, m] = todaysSlot.startTime.split(':').map(Number)
     const sessionStart = new Date(date)
     sessionStart.setHours(h, m, 0, 0)
-    const cutoff = new Date(sessionStart.getTime() + 15 * 60 * 1000)
-    return Date.now() >= cutoff.getTime()
+    return sessionStart.getTime() + 15 * 60 * 1000
   }, [todaysSlot, date])
+  const canShowUpdateTab = updateTabUnlockAt !== null && nowTick >= updateTabUnlockAt
+  const updateTabSecondsLeft = updateTabUnlockAt !== null ? Math.max(0, Math.ceil((updateTabUnlockAt - nowTick) / 1000)) : null
 
   // Snapshot học sinh vắng khi mở lần đầu (chỉ set 1 lần khi sessionId vừa sẵn sàng)
   const initialAbsentsSnapped = useRef(false)
@@ -927,6 +948,7 @@ export function AttendancePage() {
           attendanceByStudent={attendanceByStudent}
           initialAbsents={initialAbsents}
           canShowUpdateTab={canShowUpdateTab}
+          updateTabSecondsLeft={updateTabSecondsLeft}
           orgName={organization?.name}
           centerName={selectedCenter?.name}
         />
