@@ -1,4 +1,4 @@
-import { addDoc, collection, orderBy, query, serverTimestamp, where } from 'firebase/firestore'
+import { addDoc, collection, doc, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
 import { useState, type FormEvent } from 'react'
 import { db } from '../lib/firebase'
 import { useCollection } from '../lib/useCollection'
@@ -46,9 +46,37 @@ export function ClassesPage() {
   const [revenuePercentage, setRevenuePercentage] = useState(20)
   const [standardSessionsPerMonth, setStandardSessionsPerMonth] = useState(8)
   const [submitting, setSubmitting] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   function updateSlot(index: number, patch: Partial<RecurringSlot>) {
     setSlots((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)))
+  }
+
+  function resetForm() {
+    setName('')
+    setSubject('')
+    setTeacherId('')
+    setTaIds([])
+    setRoom('')
+    setSlots([{ weekday: 1, startTime: '19:00', endTime: '20:30' }])
+    setSalaryMode('fixed_per_session')
+    setRevenuePercentage(20)
+    setStandardSessionsPerMonth(8)
+    setEditingId(null)
+  }
+
+  function startEdit(c: ClassGroup) {
+    setEditingId(c.id)
+    setName(c.name)
+    setSubject(c.subject)
+    setRoom(c.room ?? '')
+    setTeacherId(c.teacherId)
+    setTaIds(c.taIds)
+    setSlots(c.schedule.length > 0 ? c.schedule : [{ weekday: 1, startTime: '19:00', endTime: '20:30' }])
+    setSalaryMode(c.salaryMode ?? 'fixed_per_session')
+    setRevenuePercentage(c.revenuePercentage ?? 20)
+    setStandardSessionsPerMonth(c.standardSessionsPerMonth ?? 8)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function handleCreate(e: FormEvent) {
@@ -57,32 +85,28 @@ export function ClassesPage() {
     setSubmitting(true)
     try {
       const classData: Record<string, unknown> = {
-        orgId: profile.orgId,
-        centerId: selectedCenterId,
         name: name.trim(),
         subject: subject.trim(),
         teacherId,
         taIds,
         schedule: slots,
         room: room.trim(),
-        active: true,
         salaryMode,
-        createdAt: serverTimestamp(),
+        revenuePercentage: salaryMode === 'percentage_revenue' ? revenuePercentage : null,
+        standardSessionsPerMonth: salaryMode === 'percentage_revenue' ? standardSessionsPerMonth : null,
       }
-      if (salaryMode === 'percentage_revenue') {
-        classData.revenuePercentage = revenuePercentage
-        classData.standardSessionsPerMonth = standardSessionsPerMonth
+      if (editingId) {
+        await updateDoc(doc(db, 'classes', editingId), classData)
+      } else {
+        await addDoc(collection(db, 'classes'), {
+          ...classData,
+          orgId: profile.orgId,
+          centerId: selectedCenterId,
+          active: true,
+          createdAt: serverTimestamp(),
+        })
       }
-      await addDoc(collection(db, 'classes'), classData)
-      setName('')
-      setSubject('')
-      setTeacherId('')
-      setTaIds([])
-      setRoom('')
-      setSlots([{ weekday: 1, startTime: '19:00', endTime: '20:30' }])
-      setSalaryMode('fixed_per_session')
-      setRevenuePercentage(20)
-      setStandardSessionsPerMonth(8)
+      resetForm()
     } finally {
       setSubmitting(false)
     }
@@ -135,6 +159,9 @@ export function ClassesPage() {
 
       {manage && (
         <form onSubmit={handleCreate} className="mb-6 space-y-3 rounded-lg border border-gray-200 bg-white p-4">
+          {editingId && (
+            <p className="text-sm font-semibold text-indigo-700">Đang sửa lớp: {name}</p>
+          )}
           <div className="flex flex-wrap gap-2">
             <input
               placeholder="Tên lớp (VD: Toán 12 - T3/T5/CN 19h)"
@@ -310,13 +337,24 @@ export function ClassesPage() {
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            Tạo lớp
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {editingId ? 'Lưu thay đổi' : 'Tạo lớp'}
+            </button>
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+            )}
+          </div>
         </form>
       )}
 
@@ -328,16 +366,27 @@ export function ClassesPage() {
             <li key={c.id} className="rounded-lg border border-gray-200 bg-white p-3">
               <div className="flex items-start justify-between gap-2">
                 <p className="font-medium text-gray-900">{c.name}</p>
-                {/* Badge chế độ lương */}
-                {c.salaryMode === 'percentage_revenue' ? (
-                  <span className="shrink-0 rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-[10px] font-bold">
-                    Khoán {c.revenuePercentage ?? 20}% DT
-                  </span>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 text-[10px] font-bold">
-                    Cố định/ca
-                  </span>
-                )}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {/* Badge chế độ lương */}
+                  {c.salaryMode === 'percentage_revenue' ? (
+                    <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-[10px] font-bold">
+                      Khoán {c.revenuePercentage ?? 20}% DT
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 text-[10px] font-bold">
+                      Cố định/ca
+                    </span>
+                  )}
+                  {manage && (
+                    <button
+                      type="button"
+                      onClick={() => startEdit(c)}
+                      className="rounded-md border border-gray-300 px-2 py-0.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50"
+                    >
+                      Sửa
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-gray-500">
                 {c.subject} · Phòng {c.room || '-'}
