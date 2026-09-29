@@ -62,6 +62,10 @@ export function ReportsPage() {
   const [month, setMonth] = useState(currentMonthValue())
   const [detailStudent, setDetailStudent] = useState<Student | null>(null)
   const { start, end } = useMemo(() => monthRange(month), [month])
+  // Firestore chỉ chấp nhận list-query khi mọi field rule đọc cũng nằm trong filter của
+  // chính query đó — "Tất cả cơ sở" không thể bỏ qua centerId, phải dùng where('in', ...)
+  // giới hạn đúng các cơ sở người này thực sự là staff (không phải toàn bộ orgId).
+  const myCenterIds = useMemo(() => profile?.centerIds ?? [], [profile])
 
   // 6-month trailing window
   const trendStartMonth = useMemo(() => monthOffset(month, -(TREND_MONTHS - 1)), [month])
@@ -83,10 +87,12 @@ export function ReportsPage() {
     () => {
       if (!profile) return null
       return centerFilter === 'ALL'
-        ? query(collection(db, 'students'), where('orgId', '==', profile.orgId))
+        ? (myCenterIds.length > 0
+            ? query(collection(db, 'students'), where('orgId', '==', profile.orgId), where('centerId', 'in', myCenterIds))
+            : null)
         : query(collection(db, 'students'), where('orgId', '==', profile.orgId), where('centerId', '==', centerFilter))
     },
-    [profile, centerFilter],
+    [profile, centerFilter, myCenterIds],
   )
   const studentMap = useMemo(() => new Map(students.map((s) => [s.id, s])), [students])
 
@@ -95,10 +101,12 @@ export function ReportsPage() {
     () => {
       if (!profile) return null
       return centerFilter === 'ALL'
-        ? query(collection(db, 'classes'), where('orgId', '==', profile.orgId))
+        ? (myCenterIds.length > 0
+            ? query(collection(db, 'classes'), where('orgId', '==', profile.orgId), where('centerId', 'in', myCenterIds))
+            : null)
         : query(collection(db, 'classes'), where('orgId', '==', profile.orgId), where('centerId', '==', centerFilter))
     },
-    [profile, centerFilter],
+    [profile, centerFilter, myCenterIds],
   )
 
   // All-time enrollments (for debt and active student count)
@@ -106,10 +114,12 @@ export function ReportsPage() {
     () => {
       if (!profile) return null
       return centerFilter === 'ALL'
-        ? query(collection(db, 'enrollments'), where('orgId', '==', profile.orgId))
+        ? (myCenterIds.length > 0
+            ? query(collection(db, 'enrollments'), where('orgId', '==', profile.orgId), where('centerId', 'in', myCenterIds))
+            : null)
         : query(collection(db, 'enrollments'), where('orgId', '==', profile.orgId), where('centerId', '==', centerFilter))
     },
-    [profile, centerFilter],
+    [profile, centerFilter, myCenterIds],
   )
 
   // All-time payments (for debt)
@@ -117,10 +127,12 @@ export function ReportsPage() {
     () => {
       if (!profile) return null
       return centerFilter === 'ALL'
-        ? query(collection(db, 'payments'), where('orgId', '==', profile.orgId))
+        ? (myCenterIds.length > 0
+            ? query(collection(db, 'payments'), where('orgId', '==', profile.orgId), where('centerId', 'in', myCenterIds))
+            : null)
         : query(collection(db, 'payments'), where('orgId', '==', profile.orgId), where('centerId', '==', centerFilter))
     },
-    [profile, centerFilter],
+    [profile, centerFilter, myCenterIds],
   )
 
   // Trailing 6-month window payments
@@ -128,11 +140,14 @@ export function ReportsPage() {
     () => {
       if (!profile) return null
       return centerFilter === 'ALL'
-        ? query(
-            collection(db, 'payments'),
-            where('orgId', '==', profile.orgId),
-            where('recordedAt', '>=', Timestamp.fromDate(trendStart)),
-          )
+        ? (myCenterIds.length > 0
+            ? query(
+                collection(db, 'payments'),
+                where('orgId', '==', profile.orgId),
+                where('centerId', 'in', myCenterIds),
+                where('recordedAt', '>=', Timestamp.fromDate(trendStart)),
+              )
+            : null)
         : query(
             collection(db, 'payments'),
             where('orgId', '==', profile.orgId),
@@ -140,7 +155,7 @@ export function ReportsPage() {
             where('recordedAt', '>=', Timestamp.fromDate(trendStart)),
           )
     },
-    [profile, centerFilter, trendStart],
+    [profile, centerFilter, trendStart, myCenterIds],
   )
 
   // Packages sold in the selected month
@@ -148,12 +163,15 @@ export function ReportsPage() {
     () => {
       if (!profile) return null
       return centerFilter === 'ALL'
-        ? query(
-            collection(db, 'enrollments'),
-            where('orgId', '==', profile.orgId),
-            where('purchasedAt', '>=', Timestamp.fromDate(start)),
-            where('purchasedAt', '<', Timestamp.fromDate(end)),
-          )
+        ? (myCenterIds.length > 0
+            ? query(
+                collection(db, 'enrollments'),
+                where('orgId', '==', profile.orgId),
+                where('centerId', 'in', myCenterIds),
+                where('purchasedAt', '>=', Timestamp.fromDate(start)),
+                where('purchasedAt', '<', Timestamp.fromDate(end)),
+              )
+            : null)
         : query(
             collection(db, 'enrollments'),
             where('orgId', '==', profile.orgId),
@@ -162,7 +180,7 @@ export function ReportsPage() {
             where('purchasedAt', '<', Timestamp.fromDate(end)),
           )
     },
-    [profile, centerFilter, start, end],
+    [profile, centerFilter, start, end, myCenterIds],
   )
 
   // Attendance in the selected month
@@ -170,12 +188,15 @@ export function ReportsPage() {
     () => {
       if (!profile) return null
       return centerFilter === 'ALL'
-        ? query(
-            collection(db, 'attendance'),
-            where('orgId', '==', profile.orgId),
-            where('recordedAt', '>=', Timestamp.fromDate(start)),
-            where('recordedAt', '<', Timestamp.fromDate(end)),
-          )
+        ? (myCenterIds.length > 0
+            ? query(
+                collection(db, 'attendance'),
+                where('orgId', '==', profile.orgId),
+                where('centerId', 'in', myCenterIds),
+                where('recordedAt', '>=', Timestamp.fromDate(start)),
+                where('recordedAt', '<', Timestamp.fromDate(end)),
+              )
+            : null)
         : query(
             collection(db, 'attendance'),
             where('orgId', '==', profile.orgId),
@@ -184,7 +205,7 @@ export function ReportsPage() {
             where('recordedAt', '<', Timestamp.fromDate(end)),
           )
     },
-    [profile, centerFilter, start, end],
+    [profile, centerFilter, start, end, myCenterIds],
   )
 
   // --- Công nợ (outstanding balance per student) ---
