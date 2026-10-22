@@ -13,3 +13,10 @@ demo-script/serviceAccountKey.json
 
 # Script tạo dữ liệu demo — dùng 1 lần tại chỗ, không phải code sản phẩm
 demo-script/
+
+# Video studio: không commit file media nặng
+studio/projects/**/*.mp4
+studio/projects/**/*.mov
+studio/projects/**/*.wav
+studio/projects/**/*.mp3
+studio/projects/**/media/
