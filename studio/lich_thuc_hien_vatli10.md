@@ -1,5 +1,7 @@
 # Lịch thực hiện bộ mô phỏng Vật lí 10 (Kết nối tri thức)
 
+> **Cập nhật 09/11/2026 (sáng sớm): cả 15 mô phỏng (M1–M15) đã làm xong, kiểm thử và xuất bản** — thầy giao hoàn thành trong một đêm nên lịch 8 tuần bên dưới chỉ còn là bản gốc để tham khảo. Xem `mo_phong/README.md` và `studio/HUONG_DAN_THAY.md`.
+
 Giả định: bắt đầu **thứ Hai 09/11/2026**, mỗi tuần làm 2 mô phỏng, thầy duyệt trong 1–2 ngày.
 Đổi ngày bắt đầu thì dời cả lịch tương ứng. Số bài đánh ◻ cần thầy đối chiếu sách (xem `ke_hoach_mo_phong_vatli10.md`).
 
