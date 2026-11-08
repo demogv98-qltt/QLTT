@@ -79,6 +79,8 @@ export function createStage(canvas, W, H) {
         sun.shadow.map = null;
       }
     },
+    /** shift the picture up by px (CSS px) so a docked panel does not cover the subject */
+    setShift(px) { camera.setViewOffset(W, H, 0, px, W, H); camera.updateProjectionMatrix(); },
     /** cam: {az, el (radians), d, tx, ty, tz} */
     frame(cam) {
       const ce = Math.cos(cam.el);
