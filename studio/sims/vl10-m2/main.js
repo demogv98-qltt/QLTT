@@ -30,7 +30,7 @@ document.title = 'VL10-M2 · Chuyển động thẳng biến đổi đều (Tear
 // camera views: [az°, el°, distance, target x, y, z, follow?]
 const VIEWFN = {
   follow: (r) => [38, 14, 13, r.d + 1.6, 0.8, 0, 1],
-  wide: (r, sp) => [14, 30, Math.max(16, 1.3 * (sp[1] - sp[0]) + 10), (sp[0] + sp[1]) / 2, 0.5, 0, 0],
+  wide: (r, sp) => [14, 30, Math.max(16, 2.7 * (sp[1] - sp[0]) + 10), (sp[0] + sp[1]) / 2, 0.5, 0, 0],
   top: (r) => [0, 78, 17, r.d, 0, 0, 1],
   wheel: (r) => [28, 46, 4.2, r.d - 0.6, 0.5, 0.2, 1],
 };

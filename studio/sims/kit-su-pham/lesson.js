@@ -53,8 +53,9 @@ export function createLesson(root, cfg, h) {
     } else if (S.phase === 'steps') {
       const st = cfg.steps[S.i]; label = `Nhiệm vụ ${S.i + 1}/${nSteps}`;
       body = `<h3>${S.i + 1}. ${st.title}</h3><p>${st.text}</p>`;
-      if (st.type === 'predict') body += `<div class="row"><span style="font:700 13px sans-serif">Em dự đoán:</span><input id="ans" inputmode="decimal" autocomplete="off" ${S.state === 'done' ? 'disabled' : ''} value="${S.last ?? ''}"><b>${st.unit}</b>${S.state === 'done' ? '' : '<button class="go" id="chk">Kiểm tra</button>'}</div>`;
-      else if (S.state !== 'done') body += `<div class="wait">▸ Đang chờ em thực hiện trên mô hình…</div>`;
+      if (st.type === 'choice') body += `<div>${st.options.map((o, k) => `<button class="opt sopt ${S.state === 'done' && k === st.answer ? 'ok' : ''}" data-k="${k}" ${S.state === 'done' ? 'disabled' : ''}>${String.fromCharCode(65 + k)}. ${o}</button>`).join('')}</div>`;
+      else if (st.type === 'predict') body += `<div class="row"><span style="font:700 13px sans-serif">Em dự đoán:</span><input id="ans" inputmode="decimal" autocomplete="off" ${S.state === 'done' ? 'disabled' : ''} value="${S.last ?? ''}"><b>${st.unit}</b>${S.state === 'done' ? '' : '<button class="go" id="chk">Kiểm tra</button>'}</div>`;
+      else if (S.state !== 'done' && st.type !== 'choice') body += `<div class="wait">▸ Đang chờ em thực hiện trên mô hình…</div>`;
       if (S.fb) body += `<div class="fb ${S.fb.k}">${S.fb.t}</div>`;
       if (S.state === 'done') body += `<div class="fb ok">✔ ${st.explain}</div>`;
       body += `<div class="row">${S.state === 'done' ? `<button class="go" id="next">${S.i + 1 < nSteps ? 'Nhiệm vụ tiếp →' : 'Làm trắc nghiệm →'}</button>` : `<button id="hint">💡 Gợi ý</button><button id="skip">Bỏ qua</button>`}${S.i > 0 ? '<button id="prev">← Quay lại</button>' : ''}</div>`;
@@ -88,7 +89,8 @@ export function createLesson(root, cfg, h) {
       else S.fb = {k: 'no', t: `Chưa khớp (em nhập ${fv(v)} ${st.unit}). Hãy xem lại gợi ý rồi thử lại. Muốn biết đáp án, bấm “Bỏ qua” hoặc làm theo gợi ý.`};
       render();
     };
-    box.querySelectorAll('.opt').forEach((b) => (b.onclick = () => { S.picked = Number(b.dataset.k); if (S.picked === cfg.quiz[S.q].answer) S.score++; render(); }));
+    box.querySelectorAll('.sopt').forEach((b) => (b.onclick = () => { const st = cfg.steps[S.i], k = Number(b.dataset.k); if (k === st.answer) { S.done.add(S.i); save(); S.state = 'done'; S.fb = null; } else S.fb = {k: 'no', t: '✘ Chưa đúng. ' + (st.wrong?.[k] ?? 'Hãy xem lại gợi ý rồi chọn lại.')}; render(); }));
+    box.querySelectorAll('.opt:not(.sopt)').forEach((b) => (b.onclick = () => { S.picked = Number(b.dataset.k); if (S.picked === cfg.quiz[S.q].answer) S.score++; render(); }));
     if ($('qnext')) $('qnext').onclick = () => { if (S.q + 1 < cfg.quiz.length) { S.q++; S.picked = null; } else S.phase = 'end'; render(); };
     if ($('again')) $('again').onclick = () => { S.done.clear(); save(); S.phase = 'intro'; S.i = 0; render(); };
     if ($('stepsb')) $('stepsb').onclick = () => { S.phase = 'steps'; S.i = 0; enterStep(); render(); };
