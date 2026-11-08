@@ -1,5 +1,5 @@
 # Phiếu mô phỏng M2 — Chuyển động thẳng biến đổi đều
-Trạng thái: **CHỜ THẦY DUYỆT** (cổng 1) · Bài SGK: 8–9 ◻ (thầy đối chiếu) · Tuần 1
+Trạng thái: **ĐÃ DỰNG — chờ thầy dùng thử** (file `mo_phong/M2_chuyen_dong_thang_bien_doi_deu.html`) · Bài SGK: 8–9 ◻ (thầy đối chiếu) · Tuần 1
 
 ## Mục tiêu (HS làm được gì)
 1. Đổi gia tốc a và vận tốc ban đầu v₀, quan sát vận tốc tăng/giảm đều theo thời gian.

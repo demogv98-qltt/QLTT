@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M2 · Chuyển động thẳng biến đổi đều</title>
+<style>
+:root{--ink:#14303c;--mute:#5a7281;--line:#c9d6de;--bg:#eef3f6;--pan:#fff;--v:#0b8f8c;--a:#e8590c;--neg:#c0392b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI","Be Vietnam Pro",Roboto,Arial,sans-serif}
+header{padding:14px 20px;background:var(--pan);border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center}
+header i{width:8px;height:38px;background:var(--a);display:block}
+h1{font-size:20px;margin:0}header p{margin:2px 0 0;color:var(--mute);font-size:13px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;padding:14px;max-width:1280px;margin:auto}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--pan);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+canvas{width:100%;display:block}
+#road{height:170px}.graphs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:700px){.graphs{grid-template-columns:1fr}}
+#gv,#gd{height:260px}
+h2{font-size:13px;letter-spacing:.6px;text-transform:uppercase;color:var(--mute);margin:0 0 8px}
+.sl{margin:0 0 10px}.sl .t{display:flex;justify-content:space-between;font-weight:600}.sl b{font:700 17px ui-monospace,Consolas,monospace}
+input[type=range]{width:100%;height:26px;accent-color:var(--v)}
+#a{accent-color:var(--a)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+button,select{font:600 14px inherit;font-family:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:8px 12px;cursor:pointer;color:var(--ink)}
+button.main{background:var(--v);border-color:var(--v);color:#fff}button.ex{font-size:13px;font-weight:500}
+.num{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-family:ui-monospace,Consolas,monospace}
+.num span:nth-child(odd){color:var(--mute)}.num span:nth-child(even){text-align:right;font-weight:700}
+.chk{font:13px ui-monospace,Consolas,monospace;line-height:1.7}.ok{color:#2d7d3a;font-weight:700}
+.note{font-size:12.5px;color:var(--mute);margin-top:6px}
+.formula{font-size:15px;line-height:1.9}
+</style>
+</head>
+<body>
+<header><i></i><div><h1>M2 · Chuyển động thẳng biến đổi đều</h1><p>Vật lí 10 · Kết nối tri thức · Thay đổi v₀ và a, quan sát đồ thị</p></div></header>
+<main>
+<section>
+  <div class="card"><h2>Xe trên đường thẳng (trục Ox)</h2><canvas id="road"></canvas></div>
+  <div class="graphs">
+    <div class="card"><h2>Đồ thị vận tốc – thời gian (v–t)</h2><canvas id="gv"></canvas></div>
+    <div class="card"><h2>Đồ thị độ dịch chuyển – thời gian (d–t)</h2><canvas id="gd"></canvas></div>
+  </div>
+</section>
+<aside>
+  <div class="card">
+    <h2>Điều khiển</h2>
+    <div class="sl"><div class="t"><span>Vận tốc ban đầu v₀</span><b id="v0t"></b></div><input id="v0" type="range" min="-10" max="20" step="0.5" value="0"></div>
+    <div class="sl"><div class="t"><span>Gia tốc a</span><b id="at" style="color:var(--a)"></b></div><input id="a" type="range" min="-5" max="5" step="0.1" value="2"></div>
+    <div class="sl"><div class="t"><span>Thời gian t</span><b id="tt"></b></div><input id="t" type="range" min="0" max="10" step="0.01" value="0"></div>
+    <div class="btns"><button id="play" class="main">▶ Chạy</button><button id="reset">↺ Đặt lại</button>
+      <select id="spd" aria-label="Tốc độ"><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option></select></div>
+    <div class="btns"><button class="ex" data-v="0" data-a="2">Ví dụ 1: v₀=0, a=2</button><button class="ex" data-v="10" data-a="-2">Ví dụ 2: v₀=10, a=−2</button><button class="ex" data-v="10" data-a="-3">Ví dụ 3: quay đầu</button></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h2>Số liệu tại thời điểm t</h2>
+    <div class="num"><span>t</span><span id="n_t"></span><span>v</span><span id="n_v"></span><span>a</span><span id="n_a"></span>
+    <span>độ dịch chuyển d</span><span id="n_d"></span><span>quãng đường s</span><span id="n_s"></span><span>loại chuyển động</span><span id="n_k"></span></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h2>Công thức và kiểm tra</h2>
+    <div class="formula">v = v₀ + a·t<br>d = v₀·t + ½·a·t²<br>v² − v₀² = 2·a·d</div>
+    <div class="chk" id="chk"></div>
+    <div class="note">d là độ dịch chuyển; d = s khi vật không đổi chiều. Phần diện tích dưới đồ thị v–t: xanh = đi theo chiều +, đỏ = đi theo chiều −. Mọi số trên màn hình đều tính từ cùng một công thức.</div>
+  </div>
+</aside>
+</main>
+<script>
+'use strict';
+const T_MAX = 10;
+const S = {v0: 0, a: 2, t: 0, playing: false, speed: 1};
+// ---- mô hình duy nhất: mọi đồ thị và số liệu đọc từ đây ----
+const vAt = (t) => S.v0 + S.a * t;
+const dAt = (t) => S.v0 * t + 0.5 * S.a * t * t;
+function sAt(t) {                       // quãng đường = tích phân |v|
+  const tz = S.a !== 0 ? -S.v0 / S.a : Infinity;
+  if (tz > 0 && tz < t) return Math.abs(dAt(tz)) + Math.abs(dAt(t) - dAt(tz));
+  return Math.abs(dAt(t));
+}
+const kind = () => {
+  const v = vAt(S.t), a = S.a;
+  if (a === 0) return S.v0 === 0 ? 'đứng yên' : 'thẳng đều';
+  if (Math.abs(v) < 1e-9) return S.t === 0 ? 'đứng yên lúc đầu' : 'dừng tức thời';
+  return v * a > 0 ? 'nhanh dần đều' : 'chậm dần đều';
+};
+const f = (x, d = 2) => (Math.abs(x) < 5e-10 ? 0 : x).toFixed(d).replace('.', ',').replace('-', '−');
+const C = {ink: '#14303c', v: '#0b8f8c', a: '#e8590c', neg: '#c0392b', grid: '#e2eaef', axis: '#7d93a0'};
+const $ = (id) => document.getElementById(id);
+
+function setup(cv) {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {g, w: r.width, h: r.height};
+}
+function niceStep(range, n) {
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p;
+}
+function arrow(g, x0, y0, x1, y1, col, w = 3) {
+  const ang = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
+  if (L < 3) return;
+  g.strokeStyle = g.fillStyle = col; g.lineWidth = w;
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(ang) * 8, y1 - Math.sin(ang) * 8); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - 11 * Math.cos(ang - 0.4), y1 - 11 * Math.sin(ang - 0.4));
+  g.lineTo(x1 - 11 * Math.cos(ang + 0.4), y1 - 11 * Math.sin(ang + 0.4)); g.fill();
+}
+const range = (fn) => { let lo = 0, hi = 0; for (let i = 0; i <= 100; i++) { const y = fn(T_MAX * i / 100); lo = Math.min(lo, y); hi = Math.max(hi, y); } if (hi - lo < 1) hi = lo + 1; const p = (hi - lo) * 0.1; return [lo - p, hi + p]; };
+
+function drawRoad() {
+  const {g, w, h} = setup($('road')); g.clearRect(0, 0, w, h);
+  const [lo, hi] = range(dAt), padL = 30, padR = 30;
+  const X = (x) => padL + (x - lo) / (hi - lo) * (w - padL - padR);
+  const y0 = h * 0.62;
+  g.fillStyle = '#dfe8ed'; g.fillRect(0, y0, w, 14);
+  const st = niceStep(hi - lo, Math.max(4, w / 90));
+  g.font = '12px ui-monospace,Consolas,monospace'; g.textAlign = 'center'; g.fillStyle = C.ink; g.strokeStyle = C.axis; g.lineWidth = 1;
+  for (let x = Math.ceil(lo / st) * st; x <= hi + 1e-9; x += st) { g.beginPath(); g.moveTo(X(x), y0); g.lineTo(X(x), y0 + 20); g.stroke(); g.fillText(f(x, st < 1 ? 1 : 0), X(x), y0 + 34); }
+  g.textAlign = 'left'; g.fillText('x (m)', w - 44, y0 + 52);
+  // vết đã đi
+  g.strokeStyle = 'rgba(11,143,140,.45)'; g.lineWidth = 5;
+  g.beginPath(); for (let i = 0; i <= 200; i++) { const t = S.t * i / 200, x = X(dAt(t)); i ? g.lineTo(x, y0 - 4) : g.moveTo(x, y0 - 4); } g.stroke();
+  // mốc xuất phát
+  g.strokeStyle = C.ink; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(0), y0 - 70); g.lineTo(X(0), y0); g.stroke(); g.setLineDash([]);
+  g.fillStyle = C.ink; g.textAlign = 'center'; g.fillText('O (t = 0)', X(0), y0 - 76);
+  // xe
+  const cx = X(dAt(S.t)), cw = 46;
+  g.fillStyle = C.v; g.fillRect(cx - cw / 2, y0 - 30, cw, 20); g.fillRect(cx - 14, y0 - 42, 28, 14);
+  g.fillStyle = C.ink; for (const dx of [-14, 14]) { g.beginPath(); g.arc(cx + dx, y0 - 8, 7, 0, 7); g.fill(); }
+  // vectơ v (xanh) và a (cam)
+  const v = vAt(S.t);
+  arrow(g, cx, y0 - 56, cx + v * 5, y0 - 56, C.v, 3.5);
+  arrow(g, cx, y0 - 70, cx + S.a * 18, y0 - 70, C.a, 3.5);
+  g.font = '700 12px ui-monospace,Consolas,monospace'; g.textAlign = 'left';
+  g.fillStyle = C.v; g.fillText('v', cx + v * 5 + (v >= 0 ? 6 : -14), y0 - 52);
+  g.fillStyle = C.a; g.fillText('a', cx + S.a * 18 + (S.a >= 0 ? 6 : -14), y0 - 66);
+}
+
+function axes(g, w, h, m, x0, x1, y0, y1, xl, yl) {
+  const X = (x) => m.l + (x - x0) / (x1 - x0) * (w - m.l - m.r), Y = (y) => h - m.b - (y - y0) / (y1 - y0) * (h - m.t - m.b);
+  g.font = '12px ui-monospace,Consolas,monospace'; g.lineWidth = 1;
+  const sx = niceStep(x1 - x0, 5), sy = niceStep(y1 - y0, 5);
+  g.strokeStyle = C.grid; g.fillStyle = C.ink; g.textAlign = 'center';
+  for (let x = Math.ceil(x0 / sx) * sx; x <= x1 + 1e-9; x += sx) { g.beginPath(); g.moveTo(X(x), Y(y0)); g.lineTo(X(x), Y(y1)); g.stroke(); g.fillText(f(x, 0), X(x), h - m.b + 15); }
+  g.textAlign = 'right';
+  for (let y = Math.ceil(y0 / sy) * sy; y <= y1 + 1e-9; y += sy) { g.beginPath(); g.moveTo(X(x0), Y(y)); g.lineTo(X(x1), Y(y)); g.stroke(); g.fillText(f(y, sy < 1 ? 1 : 0), m.l - 5, Y(y) + 4); }
+  g.strokeStyle = C.axis; g.lineWidth = 1.6;
+  g.beginPath(); g.moveTo(X(x0), Y(0)); g.lineTo(X(x1), Y(0)); g.moveTo(X(0), Y(y0)); g.lineTo(X(0), Y(y1)); g.stroke();
+  g.fillStyle = C.ink; g.textAlign = 'right'; g.fillText(xl, w - 6, Y(0) - 6); g.textAlign = 'left'; g.fillText(yl, m.l + 6, m.t + 4);
+  return {X, Y};
+}
+function drawV() {
+  const {g, w, h} = setup($('gv')); g.clearRect(0, 0, w, h);
+  const [lo, hi] = range(vAt), m = {l: 42, r: 12, t: 18, b: 24};
+  const {X, Y} = axes(g, w, h, m, 0, T_MAX, lo, hi, 't (s)', 'v (m/s)');
+  // diện tích: dương xanh, âm đỏ (chia ở điểm v = 0)
+  const tz = S.a !== 0 ? -S.v0 / S.a : Infinity;
+  const fill = (ta, tb) => { if (tb <= ta + 1e-9) return; const mid = vAt((ta + tb) / 2); g.fillStyle = mid >= 0 ? 'rgba(11,143,140,.3)' : 'rgba(192,57,43,.28)';
+    g.beginPath(); g.moveTo(X(ta), Y(0)); g.lineTo(X(ta), Y(vAt(ta))); g.lineTo(X(tb), Y(vAt(tb))); g.lineTo(X(tb), Y(0)); g.closePath(); g.fill(); };
+  if (tz > 0 && tz < S.t) { fill(0, tz); fill(tz, S.t); } else fill(0, S.t);
+  g.strokeStyle = 'rgba(20,48,60,.25)'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(0), Y(vAt(0))); g.lineTo(X(T_MAX), Y(vAt(T_MAX))); g.stroke();
+  g.strokeStyle = C.v; g.lineWidth = 3; g.beginPath(); g.moveTo(X(0), Y(vAt(0))); g.lineTo(X(S.t), Y(vAt(S.t))); g.stroke();
+  g.fillStyle = C.v; g.beginPath(); g.arc(X(S.t), Y(vAt(S.t)), 5, 0, 7); g.fill();
+  g.fillStyle = C.ink; g.font = '700 12px ui-monospace,Consolas,monospace'; g.textAlign = 'left';
+  g.fillText('Diện tích tô = d = ' + f(dAt(S.t), 1) + ' m', m.l + 6, h - m.b - 22);
+  g.fillText('Độ dốc đồ thị = a = ' + f(S.a, 1) + ' m/s²', m.l + 6, h - m.b - 6);
+}
+function drawD() {
+  const {g, w, h} = setup($('gd')); g.clearRect(0, 0, w, h);
+  const [lo, hi] = range(dAt), m = {l: 48, r: 12, t: 18, b: 24};
+  const {X, Y} = axes(g, w, h, m, 0, T_MAX, lo, hi, 't (s)', 'd (m)');
+  const curve = (ta, tb) => { g.beginPath(); for (let i = 0; i <= 120; i++) { const t = ta + (tb - ta) * i / 120; i ? g.lineTo(X(t), Y(dAt(t))) : g.moveTo(X(t), Y(dAt(t))); } g.stroke(); };
+  g.strokeStyle = 'rgba(20,48,60,.25)'; g.lineWidth = 2; curve(0, T_MAX);
+  g.strokeStyle = C.ink; g.lineWidth = 3; curve(0, S.t);
+  // tiếp tuyến: độ dốc = v
+  const t = S.t, d = dAt(t), v = vAt(t), dt = 1.6;
+  g.strokeStyle = C.v; g.lineWidth = 2.5; g.beginPath(); g.moveTo(X(t - dt), Y(d - v * dt)); g.lineTo(X(t + dt), Y(d + v * dt)); g.stroke();
+  g.fillStyle = C.ink; g.beginPath(); g.arc(X(t), Y(d), 5, 0, 7); g.fill();
+  g.font = '700 12px ui-monospace,Consolas,monospace'; g.textAlign = 'left';
+  g.fillText('Độ dốc tiếp tuyến = v = ' + f(v, 1) + ' m/s', m.l + 6, h - m.b - 6);
+}
+
+function readout() {
+  const t = S.t, v = vAt(t), d = dAt(t);
+  $('v0t').textContent = f(S.v0, 1) + ' m/s'; $('at').textContent = f(S.a, 1) + ' m/s²'; $('tt').textContent = f(t, 2) + ' s';
+  $('n_t').textContent = f(t, 2) + ' s'; $('n_v').textContent = f(v, 2) + ' m/s'; $('n_a').textContent = f(S.a, 2) + ' m/s²';
+  $('n_d').textContent = f(d, 2) + ' m'; $('n_s').textContent = f(sAt(t), 2) + ' m'; $('n_k').textContent = kind();
+  const lhs = v * v - S.v0 * S.v0, rhs = 2 * S.a * d, ok = Math.abs(lhs - rhs) < 1e-9 * Math.max(1, Math.abs(lhs));
+  $('chk').innerHTML = 'v = ' + f(S.v0, 1) + ' + (' + f(S.a, 1) + ')·' + f(t, 2) + ' = <b>' + f(v, 2) + '</b><br>' +
+    'd = <b>' + f(d, 2) + '</b> m<br>v² − v₀² = ' + f(lhs, 2) + ' ; 2·a·d = ' + f(rhs, 2) + ' <span class="ok">' + (ok ? '✔ khớp' : '✘ lệch') + '</span>';
+  $('t').value = t; $('play').textContent = S.playing ? '❚❚ Dừng' : (t >= T_MAX ? '↺ Chạy lại' : '▶ Chạy');
+}
+function draw() { drawRoad(); drawV(); drawD(); readout(); }
+
+let last = 0;
+function tick(now) {
+  if (S.playing) { const dt = Math.min(0.1, (now - last) / 1000) * S.speed; S.t = Math.min(T_MAX, S.t + dt); if (S.t >= T_MAX) S.playing = false; draw(); }
+  last = now; requestAnimationFrame(tick);
+}
+$('v0').oninput = (e) => { S.v0 = +e.target.value; draw(); };
+$('a').oninput = (e) => { S.a = +e.target.value; draw(); };
+$('t').oninput = (e) => { S.t = +e.target.value; S.playing = false; draw(); };
+$('play').onclick = () => { if (S.t >= T_MAX) S.t = 0; S.playing = !S.playing; draw(); };
+$('reset').onclick = () => { S.t = 0; S.playing = false; draw(); };
+$('spd').onchange = (e) => { S.speed = +e.target.value; };
+document.querySelectorAll('.ex').forEach((b) => b.onclick = () => { S.v0 = +b.dataset.v; S.a = +b.dataset.a; S.t = 0; S.playing = true; $('v0').value = S.v0; $('a').value = S.a; draw(); });
+addEventListener('resize', draw);
+window.M2 = {S, vAt, dAt, sAt, set(o) { Object.assign(S, o); $('v0').value = S.v0; $('a').value = S.a; draw(); }};
+draw(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>

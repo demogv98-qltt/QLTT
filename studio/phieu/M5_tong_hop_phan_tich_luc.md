@@ -1,5 +1,5 @@
 # Phiếu mô phỏng M5 — Tổng hợp và phân tích lực
-Trạng thái: **CHỜ THẦY DUYỆT** (cổng 1) · Bài SGK: 13 ◻ (thầy đối chiếu) · Tuần 1
+Trạng thái: **ĐÃ DỰNG — chờ thầy dùng thử** (file `mo_phong/M5_tong_hop_phan_tich_luc.html`) · Bài SGK: 13 ◻ (thầy đối chiếu) · Tuần 1
 
 ## Mục tiêu (HS làm được gì)
 1. Kéo hai lực F₁, F₂ đồng quy, thấy hợp lực là đường chéo hình bình hành.
