@@ -70,3 +70,9 @@ thầy trước khi làm). Studio này độc lập, không đụng `app/`.
 Agent con thường không tự gọi được agent khác. Vì vậy cách chắc chắn nhất:
 phiên Claude chính đóng vai Producer — đọc `.claude/agents/studio-producer.md`
 rồi lần lượt giao việc cho từng agent theo bảng trên.
+
+## Simulator 3D tương tác (dùng skill `teardown`)
+
+- `khtn8_don_bay_teardown.html` (ở thư mục gốc): đòn bẩy & mômen lực KHTN 8, mở trực tiếp bằng trình duyệt, chạy offline.
+- Mã nguồn: `studio/sims/khtn8-lever/` (`physics.js` vật lý, `rig.js` cơ cấu 3D, `ui.js` bảng điều khiển, `main.js` vòng lặp + auto-tour).
+- Build lại: `node ~/.claude/skills/teardown/sims/build.mjs studio/sims/khtn8-lever` rồi chép `teardown-out/dist/khtn8-lever.html` thành `khtn8_don_bay_teardown.html`.

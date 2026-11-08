@@ -20,3 +20,4 @@ studio/projects/**/*.mov
 studio/projects/**/*.wav
 studio/projects/**/*.mp3
 studio/projects/**/media/
+teardown-out/

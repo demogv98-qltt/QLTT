@@ -215,7 +215,7 @@ export function createRig(scene) {
     add(root, new THREE.CylinderGeometry(0.04, 0.05, 0.03, 20), M.dark, fx, 0.015, fz);
     add(root, new THREE.CylinderGeometry(0.022, 0.022, 0.02, 6), mat(COL.orange, {metalness: 0.3}), fx, 0.04, fz);
   }
-  box(root, 2.2, 0.012, 0.05, M.steel, 0, BASE_TOP + 0.006, 0.18);
+  box(root, 2.2, 0.012, 0.05, M.steel, 0, BASE_TOP + 0.006, 0);
   box(root, 0.18, 0.5, 0.1, M.iron, 0, BASE_TOP + 0.25, -0.17);
   box(root, 0.36, 0.28, 0.035, M.iron, 0, PIV, -0.14);
   box(root, 0.24, 0.05, 0.12, M.iron, 0, BASE_TOP + 0.025, -0.16);
@@ -247,7 +247,6 @@ export function createRig(scene) {
   beam.position.set(0, PIV, 0);
   root.add(beam);
   const outerRace = add(beam, ringGeo(0.053, 0.078, 0.06), M.alu);
-  add(beam, ringGeo(0.0, 0.0001, 0.001), M.alu, 0, 0, 0, false).visible = false;
   const cage = new THREE.Group();
   housing.add(cage);
   const ballGeo = new THREE.SphereGeometry(0.0085, 14, 10);
@@ -347,9 +346,9 @@ export function createRig(scene) {
   // ------------------------------------------------ effort module (spring-piston tension actuator) under O1
   const act = new THREE.Group();
   root.add(act);
-  const sled = box(act, 0.16, 0.02, 0.1, M.dark, 0, BASE_TOP + 0.022, 0.18);
+  const sled = box(act, 0.16, 0.02, 0.1, M.dark, 0, BASE_TOP + 0.022, 0);
   void sled;
-  box(act, 0.11, 0.24, 0.11, mat(COL.anoT, {metalness: 0.6}), 0, BASE_TOP + 0.152, 0.18);
+  box(act, 0.11, 0.24, 0.11, mat(COL.anoT, {metalness: 0.6}), 0, BASE_TOP + 0.152, 0);
   const rod = add(act, new THREE.CylinderGeometry(0.012, 0.012, 1, 14), M.steel);
   const headDisc = add(act, new THREE.CylinderGeometry(0.036, 0.036, 0.018, 24), mat(COL.orange, {metalness: 0.4}));
   const helix = [];
@@ -461,13 +460,8 @@ export function createRig(scene) {
     rod.scale.y = len;
     rod.position.y = bot + len / 2;
     headDisc.position.y = headY;
-    cable1.position.set(h1.x, (h1.y + headY) / 2, 0.18);
+    cable1.position.set(h1.x, (h1.y + headY) / 2, 0);
     cable1.scale.y = Math.max(0.01, h1.y - headY);
-    // the cable goes from the actuator head (z = .18) to the hook (z = 0): lean it in z only visually via a tilt
-    const dz = -0.18;
-    const dy = h1.y - headY;
-    cable1.rotation.x = Math.atan2(dz, dy);
-    cable1.scale.y = Math.hypot(dy, dz);
 
     // load: hanger and as many 10 N slotted weights as F2 asks for (the last one partial)
     hanger.position.copy(h2);
@@ -481,18 +475,18 @@ export function createRig(scene) {
       d.position.y = -ROPE - 0.02 - i * 0.0164 - 0.008 * k;
     });
 
+    const vis = view.vectors ?? 1;
     // vectors: length is proportional to the force (7.5 mm per N)
     arrow1.position.set(h1.x, h1.y, 0.16);
-    arrow1.userData.set(0.0075 * s.F1);
+    arrow1.userData.set(0.0075 * s.F1 * Math.min(1, vis * 1.5));
     arrow2.position.set(h2.x, h2.y, 0.16);
-    arrow2.userData.set(0.0075 * s.F2);
+    arrow2.userData.set(0.0075 * s.F2 * Math.min(1, vis * 1.5));
     // lever-arm brackets (in beam frame, so they follow the beam)
     br1.userData.set(0, -s.d1);
     br2.userData.set(0, s.d2);
     // torque arcs: sweep grows with the moment
     arc1.userData.set((40 + 200 * Math.min(1, r.tau1 / 100)) * D2R, 100 * D2R);
     arc2.userData.set((40 + 200 * Math.min(1, r.tau2 / 100)) * D2R, 80 * D2R);
-    const vis = view.vectors ?? 1;
     ov.visible = vis > 0.01;
     br1.visible = br2.visible = vis > 0.01;
     arrow1.visible = r.F1 > 0.5;
