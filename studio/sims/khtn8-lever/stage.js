@@ -8,10 +8,11 @@ const D2R = Math.PI / 180;
 
 const GROUND_VERT = /* glsl */ `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 // metric grid: 0.1 m fine lines, 1 m bold lines, fading into the background
-const GROUND_FRAG = /* glsl */ `uniform vec3 uBg; uniform vec3 uLine; uniform vec2 uC; varying vec3 vW;
+const GROUND_FRAG = /* glsl */ `uniform vec3 uBg; uniform vec3 uLine; uniform vec2 uC; uniform float uPit; varying vec3 vW;
   float line(float v, float w){ float d = abs(fract(v - 0.5) - 0.5); return 1.0 - smoothstep(0.0, w, d); }
   void main(){
     vec2 p = vW.xz;
+    if (length(p) < uPit) discard; // a round pit cut into the floor (the gun of the projectile sim sits in it)
     float fine = max(line(p.x * 10.0, 0.035 * 10.0 * 0.5), line(p.y * 10.0, 0.035 * 10.0 * 0.5));
     float bold = max(line(p.x, 0.012), line(p.y, 0.012));
     float d = length(p - uC);
@@ -56,7 +57,7 @@ export function createStage(canvas, W, H) {
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(1200, 1200).rotateX(-Math.PI / 2),
-    new THREE.ShaderMaterial({vertexShader: GROUND_VERT, fragmentShader: GROUND_FRAG, uniforms: {uBg: {value: new THREE.Color(BG)}, uLine: {value: new THREE.Color('#2b8a99')}, uC: {value: new THREE.Vector2(0, 0)}}}),
+    new THREE.ShaderMaterial({vertexShader: GROUND_VERT, fragmentShader: GROUND_FRAG, uniforms: {uBg: {value: new THREE.Color(BG)}, uLine: {value: new THREE.Color('#2b8a99')}, uC: {value: new THREE.Vector2(0, 0)}, uPit: {value: 0}}}),
   );
   scene.add(ground);
   const shade = new THREE.Mesh(
@@ -82,6 +83,7 @@ export function createStage(canvas, W, H) {
     },
     /** keep ground, shadow and sun around x (a camera that follows a moving subject) */
     setCenter(x) { ground.position.x = x; shade.position.x = x; ground.material.uniforms.uC.value.set(x, 0); sun.position.set(x - 2.4, 5, 3.2); sun.target.position.set(x, 0, 0); },
+    setPit(r) { ground.material.uniforms.uPit.value = r; },
     /** shift the picture up by px (CSS px) so a docked panel does not cover the subject */
     setShift(px) { camera.setViewOffset(W, H, 0, px, W, H); camera.updateProjectionMatrix(); },
     /** cam: {az, el (radians), d, tx, ty, tz} */
