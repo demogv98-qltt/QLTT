@@ -8,13 +8,13 @@ const D2R = Math.PI / 180;
 
 const GROUND_VERT = /* glsl */ `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 // metric grid: 0.1 m fine lines, 1 m bold lines, fading into the background
-const GROUND_FRAG = /* glsl */ `uniform vec3 uBg; uniform vec3 uLine; varying vec3 vW;
+const GROUND_FRAG = /* glsl */ `uniform vec3 uBg; uniform vec3 uLine; uniform vec2 uC; varying vec3 vW;
   float line(float v, float w){ float d = abs(fract(v - 0.5) - 0.5); return 1.0 - smoothstep(0.0, w, d); }
   void main(){
     vec2 p = vW.xz;
     float fine = max(line(p.x * 10.0, 0.035 * 10.0 * 0.5), line(p.y * 10.0, 0.035 * 10.0 * 0.5));
     float bold = max(line(p.x, 0.012), line(p.y, 0.012));
-    float d = length(p);
+    float d = length(p - uC);
     float fade = 1.0 - smoothstep(2.5, 9.0, d);
     float a = (0.16 * fine + 0.55 * bold) * fade;
     vec3 col = mix(uBg * 0.985, uLine, a);
@@ -29,7 +29,7 @@ export function createStage(canvas, W, H) {
   renderer.shadowMap.type = THREE.PCFShadowMap;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(BG);
-  const camera = new THREE.PerspectiveCamera(28, W / H, 0.05, 80);
+  const camera = new THREE.PerspectiveCamera(28, W / H, 0.1, 4000);
 
   const pm = new THREE.PMREMGenerator(renderer);
   scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -49,13 +49,14 @@ export function createStage(canvas, W, H) {
   sun.shadow.normalBias = 0.02;
   sun.shadow.radius = 4;
   scene.add(sun);
+  scene.add(sun.target);
   const fill = new THREE.DirectionalLight(0xdbeaff, 0.5);
   fill.position.set(3, 2, 2);
   scene.add(fill);
 
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(40, 40).rotateX(-Math.PI / 2),
-    new THREE.ShaderMaterial({vertexShader: GROUND_VERT, fragmentShader: GROUND_FRAG, uniforms: {uBg: {value: new THREE.Color(BG)}, uLine: {value: new THREE.Color('#2b8a99')}}}),
+    new THREE.PlaneGeometry(1200, 1200).rotateX(-Math.PI / 2),
+    new THREE.ShaderMaterial({vertexShader: GROUND_VERT, fragmentShader: GROUND_FRAG, uniforms: {uBg: {value: new THREE.Color(BG)}, uLine: {value: new THREE.Color('#2b8a99')}, uC: {value: new THREE.Vector2(0, 0)}}}),
   );
   scene.add(ground);
   const shade = new THREE.Mesh(
@@ -79,6 +80,8 @@ export function createStage(canvas, W, H) {
         sun.shadow.map = null;
       }
     },
+    /** keep ground, shadow and sun around x (a camera that follows a moving subject) */
+    setCenter(x) { ground.position.x = x; shade.position.x = x; ground.material.uniforms.uC.value.set(x, 0); sun.position.set(x - 2.4, 5, 3.2); sun.target.position.set(x, 0, 0); },
     /** shift the picture up by px (CSS px) so a docked panel does not cover the subject */
     setShift(px) { camera.setViewOffset(W, H, 0, px, W, H); camera.updateProjectionMatrix(); },
     /** cam: {az, el (radians), d, tx, ty, tz} */

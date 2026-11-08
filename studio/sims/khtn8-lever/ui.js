@@ -17,7 +17,7 @@ html,body{margin:0;background:#e9eff3;overflow:hidden;height:100%}
 #ui *{box-sizing:border-box}
 .panel{position:absolute;top:78px;width:372px;bottom:22px;background:rgba(248,251,253,.93);border:1px solid #b6c6d0;border-radius:6px;padding:14px 16px;overflow:hidden;pointer-events:auto;box-shadow:0 8px 28px rgba(30,60,80,.12)}
 #left{left:20px}#right{right:20px}
-.mhdr{position:absolute;left:20px;top:16px;display:flex;align-items:center;gap:14px;pointer-events:none}
+.mhdr{position:absolute;left:20px;top:12px;display:flex;align-items:center;gap:14px;pointer-events:none;padding:4px 18px 4px 0;background:rgba(233,239,243,.88);border-radius:6px}
 .mhdr .bar{width:8px;height:44px;background:${OR}}
 .mhdr h1{margin:0;font:800 26px/1.1 'Inter','JetBrains Mono',sans-serif;letter-spacing:.5px}
 .mhdr p{margin:3px 0 0;font:500 12.5px 'JetBrains Mono',monospace;color:#4d6573;letter-spacing:.8px}
