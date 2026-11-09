@@ -1,6 +1,13 @@
 // Bộ "Bài học" dùng chung cho mọi mô phỏng: mục tiêu → nhiệm vụ từng bước (tự kiểm tra từ mô hình) → đoán trước rồi quan sát
 // → trắc nghiệm có giải thích lỗi sai phổ biến → ghi nhớ. Đáp án luôn tính từ chính mô hình vật lí, không gõ tay.
 export const LESSON_CSS = `
+#lay{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;gap:6px;z-index:30;pointer-events:auto}
+#lay button{font:700 12.5px 'Inter',sans-serif;border:1px solid #b6c6d0;background:rgba(255,255,255,.94);color:#14303c;border-radius:999px;padding:6px 13px;cursor:pointer;box-shadow:0 2px 8px rgba(30,60,80,.12)}
+#lay button:hover{background:#fff;border-color:#0b8f8c}#lay button.off{background:#14303c;color:#fff;border-color:#14303c}
+#left,#right{transition:transform .38s cubic-bezier(.3,.7,.2,1),opacity .3s}
+#left.hide{transform:translateX(-118%);opacity:0;pointer-events:none}#right.hide{transform:translateX(118%);opacity:0;pointer-events:none}
+#labels.hide{display:none}
+
 #lesson{position:absolute;left:410px;width:780px;bottom:18px;background:rgba(255,255,255,.97);border:1px solid #b6c6d0;border-radius:8px;box-shadow:0 8px 28px rgba(30,60,80,.18);pointer-events:auto;font-family:'Inter','JetBrains Mono',sans-serif;color:#14303c;overflow:hidden}
 #lesson .lh{display:flex;align-items:center;gap:10px;padding:7px 12px;background:#14303c;color:#fff;cursor:pointer}
 #lesson .lh b{font:800 13px 'JetBrains Mono',monospace;letter-spacing:1px}
@@ -34,7 +41,27 @@ const fv = (v, d = 2) => Number(v).toFixed(d).replace('.', ',');
  *  quiz item:      {q, options[], answer: index, explain}
  * h = {ctx(): any, onSize(px)}   ctx() returns the model readout the checks read from.
  */
+/** layout buttons shared by every simulation: collapse the left / right panel, hide the name tags; remembered between visits */
+function installLayout(root) {
+  if (root.querySelector('#lay')) return;
+  const bar = el('<div id="lay"><button data-k="L"></button><button data-k="N"></button><button data-k="R"></button></div>'); root.appendChild(bar);
+  const st = {L: false, N: false, R: false}; try { Object.assign(st, JSON.parse(localStorage.getItem('layout:v1') || '{}')); } catch (e) { /* ignore */ }
+  const apply = () => {
+    const $ = (q) => root.querySelector(q), L = $('#left'), R = $('#right'), lab = $('#labels');
+    L?.classList.toggle('hide', st.L); R?.classList.toggle('hide', st.R); lab?.classList.toggle('hide', st.N);
+    const b = (k) => bar.querySelector(`[data-k="${k}"]`);
+    b('L').textContent = st.L ? '▶ Mở số liệu' : '◀ Thu gọn số liệu'; b('R').textContent = st.R ? '◀ Mở điều khiển' : 'Thu gọn điều khiển ▶'; b('N').textContent = st.N ? '🏷 Hiện thẻ tên' : '🏷 Ẩn thẻ tên';
+    for (const k of ['L', 'R', 'N']) b(k).classList.toggle('off', st[k]);
+    window.__viewZoom = st.L && st.R ? 0.78 : st.L || st.R ? 0.9 : 1;
+    try { localStorage.setItem('layout:v1', JSON.stringify(st)); } catch (e) { /* ignore */ }
+  };
+  const flip = (k) => { st[k] = !st[k]; apply(); };
+  bar.addEventListener('click', (e) => { const k = e.target.closest('button')?.dataset.k; if (k) flip(k); });
+  addEventListener('keydown', (e) => { if (e.altKey || e.ctrlKey || e.metaKey || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return; if (e.key === '[') flip('L'); else if (e.key === ']') flip('R'); else if (e.key.toLowerCase() === 'n') flip('N'); });
+  apply();
+}
 export function createLesson(root, cfg, h) {
+  installLayout(root);
   const box = el('<div id="lesson"></div>'); root.appendChild(box);
   const S = {phase: 'intro', i: 0, done: new Set(), state: 'wait', hintN: 0, q: 0, score: 0, picked: null, min: false, fb: null};
   const key = 'lesson:' + cfg.code;

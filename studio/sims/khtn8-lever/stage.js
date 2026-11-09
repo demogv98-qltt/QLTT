@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 export const BG = '#e9eff3';
+let zc = 1;
 const D2R = Math.PI / 180;
 
 const GROUND_VERT = /* glsl */ `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
@@ -88,8 +89,9 @@ export function createStage(canvas, W, H) {
     setShift(px) { camera.setViewOffset(W, H, 0, px, W, H); camera.updateProjectionMatrix(); },
     /** cam: {az, el (radians), d, tx, ty, tz} */
     frame(cam) {
-      const ce = Math.cos(cam.el);
-      camera.position.set(cam.tx + cam.d * ce * Math.sin(cam.az), cam.ty + cam.d * Math.sin(cam.el), cam.tz + cam.d * ce * Math.cos(cam.az));
+      // the layout buttons (collapse the side panels) set window.__viewZoom < 1: the picture then fills the freed space smoothly
+      zc += ((window.__viewZoom || 1) - zc) * 0.12; const d = cam.d * zc, ce = Math.cos(cam.el);
+      camera.position.set(cam.tx + d * ce * Math.sin(cam.az), cam.ty + d * Math.sin(cam.el), cam.tz + d * ce * Math.cos(cam.az));
       camera.lookAt(cam.tx, cam.ty, cam.tz);
       camera.updateMatrixWorld(true);
       renderer.render(scene, camera);
