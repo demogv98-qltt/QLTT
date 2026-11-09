@@ -1,0 +1,47 @@
+// Nội dung bài học S3 (KHTN 8: hệ tuần hoàn, cấu tạo tim, chu kì tim, vòng tuần hoàn). ctx = {s, r, td, view}.
+// act = {hr(v), phase(id), run()}.
+export function makeLesson(act) {
+  return {
+    code: 'sinh-s3',
+    title: 'Tim và vòng tuần hoàn: tim đập như thế nào?',
+    objectives: [
+      'Gọi tên 4 ngăn tim, các van tim và các mạch máu lớn; phân biệt máu đỏ tươi (giàu O₂) và đỏ sẫm (nghèo O₂).',
+      'Mô tả chu kì tim: nhĩ co, thất co, dãn chung; tính chu kì T = 60/nhịp tim và lưu lượng tim.',
+      'Giải thích vì sao có tiếng tim “tùng – tắc”, và vì sao máu chỉ chảy một chiều.',
+      'Trình bày đường đi của máu trong vòng tuần hoàn lớn và vòng tuần hoàn nhỏ.',
+    ],
+    steps: [
+      {type: 'do', title: 'Nhìn vào bên trong tim', text: 'Bấm nút cam “MẶT CẮT” (hoặc phím T) để cắt bỏ nửa trước của tim, quan sát 4 ngăn tim đang đập.', hints: ['Nút cam ở bảng bên phải.'], setup: () => { act.hr(75); act.run(); }, check: (c) => c.td > 0.85, explain: 'Tim có 4 ngăn: 2 tâm nhĩ ở trên, 2 tâm thất ở dưới. Máu xanh (đỏ sẫm) ở nửa phải, máu đỏ tươi ở nửa trái.'},
+      {type: 'choice', title: 'Ngăn nào dày nhất?', text: 'Nhìn bề dày thành tim: ngăn nào có thành cơ dày nhất?', options: ['Tâm thất trái', 'Tâm thất phải', 'Tâm nhĩ phải'], answer: 0, wrong: ['', 'Thất phải chỉ đẩy máu lên phổi (gần, áp suất thấp) nên thành mỏng hơn thất trái.', 'Tâm nhĩ chỉ đẩy máu xuống thất ngay bên dưới nên thành rất mỏng.'], hints: ['Ngăn nào phải đẩy máu đi khắp cơ thể?'], explain: 'Thất trái bơm máu đi khắp cơ thể qua động mạch chủ nên cần thành cơ dày nhất.'},
+      {type: 'choice', title: 'Vách ngăn tim', text: 'Vách ngăn giữa nửa phải và nửa trái của tim có tác dụng gì?', options: ['Không cho máu đỏ tươi và máu đỏ sẫm trộn lẫn với nhau', 'Làm tim đập nhanh hơn', 'Giữ cho tim luôn đầy máu'], answer: 0, wrong: ['', 'Nhịp tim do hệ thần kinh và nút xoang quyết định, không phải vách ngăn.', 'Vách ngăn không điều khiển lượng máu trong tim.'], hints: ['Nửa trái và nửa phải mang loại máu khác nhau.'], explain: 'Nhờ vách ngăn, máu giàu O₂ ở nửa trái không bị lẫn với máu nghèo O₂ ở nửa phải.'},
+      {type: 'predict', title: 'Chu kì tim', text: 'Tim đang đập 75 lần/phút. Mỗi chu kì tim kéo dài bao nhiêu giây? (T = 60/nhịp tim)', unit: 's', hints: ['T = 60/75.'], answer: (c) => 60 / c.s.hr, tol: 0.01, explain: 'T = 60/75 = 0,8 s. Mỗi giây tim chưa đập tới 1 lần.'},
+      {type: 'predict', title: 'Thời gian dãn chung', text: 'Trong chu kì 0,8 s: tâm nhĩ co 0,1 s, tâm thất co 0,3 s. Phần còn lại là tim dãn chung. Tính thời gian dãn chung.', unit: 's', hints: ['0,8 − 0,1 − 0,3.'], answer: (c) => c.r.tDia, tol: 0.01, explain: 'Dãn chung 0,4 s, tức tim nghỉ khoảng nửa chu kì. Nhờ vậy cơ tim làm việc suốt đời mà không mệt.'},
+      {type: 'do', title: 'Khi chạy bộ', text: 'Kéo thanh “Nhịp tim” đến 120 lần/phút, như khi chạy bộ.', hints: ['Thanh trượt đầu tiên ở bảng bên phải, hoặc bấm tình huống “Chạy bộ”.'], check: (c) => Math.abs(c.s.hr - 120) <= 1, explain: 'Tim đập nhanh hơn để cung cấp nhiều O₂ hơn cho cơ bắp.'},
+      {type: 'predict', title: 'Chu kì lúc chạy', text: 'Ở 120 lần/phút, mỗi chu kì tim kéo dài bao nhiêu giây?', unit: 's', hints: ['T = 60/120.'], answer: (c) => 60 / c.s.hr, tol: 0.01, explain: 'T = 0,5 s. Quan sát cột thời gian ở bảng bên trái: các pha đều ngắn lại.'},
+      {type: 'choice', title: 'Nhịp tim nhanh hơn', text: 'Khi nhịp tim tăng lên, mỗi chu kì tim ngắn lại. Thời gian nghỉ (dãn chung) trong mỗi chu kì sẽ:', options: ['Ngắn lại', 'Dài ra', 'Không đổi'], answer: 0, wrong: ['', 'Chu kì ngắn lại nên mọi pha đều ngắn lại, không thể dài ra.', 'So sánh 0,4 s lúc nghỉ với thời gian dãn chung bây giờ ở thanh thời gian.'], hints: ['Nhìn cột “Dãn chung” ở bảng bên trái.'], explain: 'Dãn chung ngắn lại, nên tim ít được nghỉ hơn. Vì vậy chạy lâu sẽ mệt.'},
+      {type: 'do', title: 'Dừng ở pha thất co', text: 'Bấm “Thất co” ở mục “Dừng ở pha” để dừng tim đúng lúc tâm thất đang co. Quan sát các van.', hints: ['Nút “Thất co” ở bảng bên phải.'], setup: () => act.hr(75), check: (c) => c.s.paused && c.r.ph.id === 'ventricular', explain: 'Tâm thất co, máu bị ép ra khỏi tim. Lúc này van hai lá và van ba lá đóng, van động mạch mở.'},
+      {type: 'choice', title: 'Các van lúc thất co', text: 'Khi tâm thất co, các van ở tim như thế nào?', options: ['Van nhĩ thất đóng, van động mạch mở', 'Van nhĩ thất mở, van động mạch đóng', 'Tất cả các van đều mở'], answer: 0, wrong: ['', 'Đó là lúc tim dãn chung: máu từ nhĩ xuống thất.', 'Nếu tất cả van đều mở, máu sẽ chảy ngược về nhĩ.'], hints: ['Máu phải đi lên động mạch chứ không quay về nhĩ.'], explain: 'Van nhĩ thất đóng để máu không chảy ngược về tâm nhĩ; van động mạch mở cho máu ra động mạch.'},
+      {type: 'do', title: 'Dừng ở pha nhĩ co', text: 'Bấm “Nhĩ co” để dừng tim ở pha tâm nhĩ co, rồi so sánh các van.', hints: ['Nút “Nhĩ co”.'], check: (c) => c.s.paused && c.r.ph.id === 'atrial', explain: 'Tâm nhĩ co đẩy nốt máu xuống tâm thất; van nhĩ thất mở, van động mạch đóng.'},
+      {type: 'predict', title: 'Thời gian nhĩ co', text: 'Ở 75 lần/phút, tâm nhĩ co trong bao nhiêu giây? (Xem thanh thời gian ở bảng bên trái.)', unit: 's', setup: () => { act.hr(75); act.run(); }, hints: ['Pha màu cam.'], answer: (c) => c.r.tAtr, tol: 0.01, explain: 'Nhĩ co 0,1 s, rất ngắn vì nhĩ chỉ đẩy máu xuống thất ngay bên dưới.'},
+      {type: 'predict', title: 'Lưu lượng tim', text: 'Mỗi lần thất trái co đẩy ra khoảng 70 mL máu. Với 75 lần/phút, mỗi phút tim bơm bao nhiêu lít máu? (Lưu lượng tim = nhịp tim × thể tích mỗi lần đập)', unit: 'L/phút', hints: ['75 × 70 mL = 5250 mL.'], answer: (c) => (c.s.hr * 70) / 1000, tol: 0.05, explain: '75 × 70 = 5250 mL, tức khoảng 5,25 lít mỗi phút, xấp xỉ toàn bộ lượng máu của cơ thể.'},
+      {type: 'predict', title: 'Tim đập trong 1 giờ', text: 'Ở 75 lần/phút, tim đập bao nhiêu lần trong 1 giờ?', unit: 'lần', hints: ['75 × 60.'], answer: (c) => c.s.hr * 60, tol: 1, explain: '75 × 60 = 4500 lần mỗi giờ, hơn 100 000 lần mỗi ngày.'},
+      {type: 'do', title: 'Nghe tiếng tim', text: 'Bấm “🔊 Tiếng tim” để bật âm thanh (nếu đang tắt), cho tim chạy và lắng nghe “tùng – tắc”.', hints: ['Nút “Tiếng tim”; bấm vào màn hình một lần để trình duyệt cho phép phát âm thanh.'], setup: () => act.run(), check: (c) => c.s.sound && !c.s.paused && c.s.beats >= 1, explain: '“Tùng” là lúc van nhĩ thất đóng (thất bắt đầu co); “tắc” là lúc van động mạch đóng (thất dãn ra).'},
+      {type: 'choice', title: 'Máu từ phổi về tim', text: 'Máu giàu O₂ từ phổi theo tĩnh mạch phổi trở về ngăn nào của tim?', options: ['Tâm nhĩ trái', 'Tâm nhĩ phải', 'Tâm thất phải'], answer: 0, wrong: ['', 'Tâm nhĩ phải nhận máu từ các tĩnh mạch chủ của cơ thể.', 'Tâm thất phải là nơi đẩy máu LÊN phổi, không phải nhận máu từ phổi.'], hints: ['Nhìn các tĩnh mạch phổi đổ vào đâu (xem nhãn).'], explain: 'Tĩnh mạch phổi → tâm nhĩ trái → tâm thất trái → động mạch chủ: máu đỏ tươi đi nuôi cơ thể.'},
+      {type: 'choice', title: 'Máu trong động mạch phổi', text: 'Máu chảy trong động mạch phổi (từ tim lên phổi) có đặc điểm gì?', options: ['Nghèo O₂, màu đỏ sẫm', 'Giàu O₂, màu đỏ tươi', 'Không chứa O₂'], answer: 0, wrong: ['', 'Nhiều bạn nghĩ động mạch luôn mang máu đỏ tươi. Không đúng: động mạch phổi mang máu từ cơ thể về, chưa lấy O₂ ở phổi.', 'Máu này vẫn còn một lượng O₂, chỉ là ít.'], hints: ['Máu vừa đi qua cơ thể và mất bớt O₂.'], explain: 'Động mạch là mạch dẫn máu RA KHỎI tim. Máu ở động mạch phổi nghèo O₂, ở tĩnh mạch phổi mới giàu O₂.'},
+      {type: 'do', title: 'Theo dõi vòng tuần hoàn', text: 'Bấm nút “3 · VÒNG TUẦN HOÀN” để nhìn máu đi qua cơ thể và phổi.', hints: ['Bốn nút ở cuối bảng bên phải.'], check: (c) => c.view === 'vessels', explain: 'Các chấm đỏ rời tim đi nuôi cơ thể, rồi đổi thành chấm xanh (đỏ sẫm) quay về nửa phải; ở phổi lại đổi thành chấm đỏ.'},
+    ],
+    quiz: [
+      {q: 'Tim người có mấy ngăn?', options: ['2', '3', '4', '5'], answer: 2, explain: 'Tim có 4 ngăn: 2 tâm nhĩ và 2 tâm thất.'},
+      {q: 'Nhịp tim 60 lần/phút thì chu kì tim là:', options: ['0,6 s', '1 s', '1,5 s', '60 s'], answer: 1, explain: 'T = 60/60 = 1 s.'},
+      {q: 'Khi tâm thất trái co, máu được đẩy vào:', options: ['Tâm nhĩ trái', 'Động mạch chủ', 'Tĩnh mạch phổi', 'Tâm nhĩ phải'], answer: 1, explain: 'Thất trái → động mạch chủ → đi khắp cơ thể (vòng tuần hoàn lớn).'},
+      {q: 'Van nhĩ thất có tác dụng:', options: ['Cho máu chảy từ thất ngược về nhĩ', 'Chỉ cho máu chảy từ nhĩ xuống thất', 'Làm tim đập nhanh', 'Lọc máu'], answer: 1, explain: 'Van nhĩ thất chỉ mở một chiều: nhĩ → thất. Khi thất co, van đóng để máu không chảy ngược.'},
+      {q: 'Vòng tuần hoàn nhỏ đi từ:', options: ['Thất trái → động mạch chủ → cơ thể → nhĩ phải', 'Thất phải → động mạch phổi → phổi → tĩnh mạch phổi → nhĩ trái', 'Nhĩ trái → thất trái → phổi', 'Thất phải → cơ thể → nhĩ trái'], answer: 1, explain: 'Vòng tuần hoàn nhỏ: thất phải → động mạch phổi → phổi (lấy O₂, thải CO₂) → tĩnh mạch phổi → nhĩ trái.'},
+    ],
+    summary: [
+      'Tim có 4 ngăn: tâm nhĩ phải và trái, tâm thất phải và trái. Thất trái có thành dày nhất.',
+      'Chu kì tim 0,8 s: nhĩ co 0,1 s, thất co 0,3 s, dãn chung 0,4 s (ở 75 lần/phút). T = 60/nhịp tim.',
+      'Van nhĩ thất và van động mạch làm máu chỉ chảy một chiều; tiếng tim “tùng – tắc” do các van đóng.',
+      'Vòng tuần hoàn lớn: thất trái → động mạch chủ → cơ thể → tĩnh mạch chủ → nhĩ phải. Vòng nhỏ: thất phải → động mạch phổi → phổi → tĩnh mạch phổi → nhĩ trái.',
+    ],
+  };
+}
