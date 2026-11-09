@@ -27,7 +27,7 @@ Các link này là trang xem thử riêng tư (chỉ chủ tài khoản mở đ�
 |---|---|
 | W1 Mô tả sóng | https://claude.ai/artifact/3N37UpSWT7KW3KqYNqcWSB |
 | W2 Sóng ngang, sóng dọc, cường độ sóng | https://claude.ai/artifact/WamSZ3YXzpUCCF3YJ782sQ |
-| W3 Sóng điện từ | (đang hoàn thiện) |
+| W3 Sóng điện từ | https://claude.ai/artifact/XG9vx5Po5H3e8jnwV7KFGx |
 | W4 Giao thoa sóng nước | https://claude.ai/artifact/LJh3R1j7wH7CjxeiWtysQ8 |
 | W4B Giao thoa ánh sáng (khe Young) | https://claude.ai/artifact/NS6noRYSKaLpBW17JukWw1 |
 | W5 Sóng dừng | https://claude.ai/artifact/AJpHa5xnb7RsAen7ubsCpG |
