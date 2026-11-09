@@ -23,7 +23,7 @@ lệnh lỗi. Khi cần thầy chạy lệnh:
 ## Repo & branch
 
 - Remote: `demogv98-qltt/QLTT` (GitHub). Nhánh chính: `main`.
-- Thầy thao tác trên máy Windows tại `C:\Users\THVL\QLTT`, luôn `git pull` từ
+- Thầy thao tác trên máy Windows tại `C:\Users\THVL\QLTT` (máy làm app QLTT; trên máy tên người dùng `THU PHUONG` thì chưa có thư mục dự án, nếu cần thì tải về `C:\Users\THU PHUONG\QLTT`), luôn `git pull` từ
   `main` trước khi deploy. Nếu agent làm việc trên nhánh riêng, **nhớ merge
   vào `main` và bảo thầy `git pull` lại** — nếu không thầy sẽ deploy nhầm bản
   cũ và không hiểu vì sao code mới "không có tác dụng".
