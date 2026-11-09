@@ -55,7 +55,7 @@ export function createUI(app, hooks) {
         $('res').innerHTML = s.mode === 'T' ? `Sóng <b>ngang</b>: vòng dao động theo phương <b>vuông góc</b> với phương truyền sóng<br>λ = v/f = <b>${f(r.v, 1)}</b>/<b>${f(r.f, 1)}</b> = <b>${f(r.lam, 2)}</b> m (khoảng cách hai đỉnh)` : `Sóng <b>dọc</b>: vòng dao động <b>dọc theo</b> phương truyền sóng<br>λ = <b>${f(r.lam, 2)}</b> m = khoảng cách hai vùng nén liên tiếp · mật độ tại vòng đang chọn: <b>${f(r.rho * 100, 0)}</b> %`;
       } else {
         set('P', `${f(r.P, 2)}<small>W</small>`, r.P / 2); set('r1', `${f(r.r, 2)}<small>m</small>`, r.r / 3); set('I1', `${f(r.I1 * 1000, 1)}<small>mW/m²</small>`, r.I1 / 0.35); set('r2', `${f(r.r2, 2)}<small>m</small>`, r.r2 / 6); set('I2', `${f(r.I2 * 1000, 1)}<small>mW/m²</small>`, r.I2 / 0.35); set('ra', `${f(r.ratio, 2)}`, r.ratio / 5);
-        $('res').innerHTML = `I = P/S = P/(4πr²)<br>S₁ = <b>${f(r.S1, 2)}</b> m² · S₂ = <b>${f(r.S2, 2)}</b> m² (gấp <b>${f(r.S2 / r.S1, 0)}</b> lần)<br>Công suất qua mỗi mặt cầu: <b>${f(r.I1 * r.S1, 2)}</b> W = <b>${f(r.I2 * r.S2, 2)}</b> W`;
+        $('res').innerHTML = `I = P/S = P/(4πr²)<br>S₁ = <b>${f(r.S1, 2)}</b> m² · S₂ = <b>${f(r.S2, 2)}</b> m² (gấp <b>${f(r.S2 / r.S1, 0)}</b> lần)<br>Bỏ qua sàn và hấp thụ. Công suất qua mỗi mặt cầu: <b>${f(r.I1 * r.S1, 2)}</b> W = <b>${f(r.I2 * r.S2, 2)}</b> W`;
       }
       // graph 1
       let c = $('g1'), g = c.getContext('2d'), w = c.width, h = c.height; g.clearRect(0, 0, w, h);

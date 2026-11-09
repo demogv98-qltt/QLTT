@@ -19,7 +19,7 @@ export function createUI(app, hooks) {
     <table class="tb" id="tb"></table><canvas class="gr" id="g1" width="680" height="420"></canvas></div>`));
   const sl = (id, label, a, b, step, c) => `<div class="sl" style="--c:${c}"><div class="top"><div>${label} <span>${a}…${b}</span></div><b id="sv-${id}"></b></div><input id="s-${id}" type="range" min="${a}" max="${b}" step="${step}"></div>`;
   root.appendChild(el(`<div class="panel" id="right"><div class="ptitle"><span>BẢNG ĐIỀU KHIỂN</span><span>CONTROLS</span></div>
-    <div style="font:700 12px Inter;margin-bottom:4px">Chọn âm thoa (tần số biết trước)</div><div class="fk" id="fk">${FORKS.map((v) => `<button data-f="${v}">${v}</button>`).join('')}</div>
+    <div style="font:700 12px Inter;margin-bottom:4px">Chọn tần số của loa (Hz)</div><div class="fk" id="fk">${FORKS.map((v) => `<button data-f="${v}">${v}</button>`).join('')}</div>
     ${sl('T', 't nhiệt độ không khí (°C)', T_RANGE[0], T_RANGE[1], 1, RD)}${sl('l', 'l chiều dài cột khí (cm) — nâng/hạ bình nước', 0, LT * 100, 0.1, BL)}
     <div style="display:flex;gap:6px;margin-bottom:6px"><button class="btn big" id="b-l1" style="margin:0;height:40px;font-size:14px;flex:1;box-shadow:none">＋ Ghi l₁</button><button class="btn big" id="b-l2" style="margin:0;height:40px;font-size:14px;flex:1;box-shadow:none;background:#e8590c;border-color:#e8590c">＋ Ghi l₂</button></div>
     <div style="display:flex;gap:6px;margin-bottom:8px"><button class="pre" id="b-clear" style="margin:0;flex:1;text-align:center;font:700 12.5px Inter,sans-serif">Xoá bảng số liệu</button></div>

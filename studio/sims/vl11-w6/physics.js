@@ -3,8 +3,8 @@
 export const LT = 1.0, RT = 0.02, E_CORR = 0.6 * RT, DL = 0.005; // tube length (m), tube radius, end correction, reading uncertainty (m)
 export const F_RANGE = [256, 640], T_RANGE = [0, 40], FORKS = [256, 320, 384, 480, 512, 640];
 export const PRESETS = [
-  {id: 'a', vi: 'Âm thoa 512 Hz, 20 °C', note: 'λ ≈ 67 cm → l₁ ≈ 15,5 cm, l₂ ≈ 49 cm', f: 512, T: 20, l: 30},
-  {id: 'b', vi: 'Âm thoa 384 Hz, 20 °C', note: 'λ ≈ 89 cm → chỉ vừa đủ hai cực đại', f: 384, T: 20, l: 30},
+  {id: 'a', vi: 'Loa 512 Hz, 20 °C', note: 'λ ≈ 67 cm → l₁ ≈ 15,5 cm, l₂ ≈ 49 cm', f: 512, T: 20, l: 30},
+  {id: 'b', vi: 'Loa 384 Hz, 20 °C', note: 'λ ≈ 89 cm → chỉ vừa đủ hai cực đại', f: 384, T: 20, l: 30},
   {id: 'c', vi: 'Trời nóng 35 °C, 512 Hz', note: 'v tăng → λ dài hơn, cực đại dịch xuống', f: 512, T: 35, l: 30},
 ];
 export const createModel = () => ({f: 512, T: 20, l: 0.3, t: 0, speed: 1, cur: {f: null, l1: null, l2: null}, trials: []});

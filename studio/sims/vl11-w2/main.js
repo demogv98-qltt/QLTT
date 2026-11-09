@@ -94,7 +94,7 @@ function labelItems(r, s, td) {
     at('spk', rig.pts.speaker, {text: 'LOA · NGUỒN ĐIỂM', sub: `P = ${f1(s.P, 2)} W`, color: INK, dy: -30});
     at('m1', rig.pts.m1, {text: `MÁY ĐO 1 · r = ${f1(r.r, 2)} m`, sub: `I₁ = ${f1(r.I1 * 1000, 1)} mW/m²`, color: '#0b8f8c', dy: -40});
     at('m2', rig.pts.m2, {text: `MÁY ĐO 2 · r = ${f1(r.r2, 2)} m`, sub: `I₂ = ${f1(r.I2 * 1000, 1)} mW/m²`, color: '#e8590c', dy: -40});
-    at('sh1', rig.pts.sh1, {text: `S₁ = ${f1(r.S1, 1)} m²`, sub: 'mặt cầu 1', color: '#0b8f8c', dy: 10});
+    at('sh1', rig.pts.sh1, {text: `S₁ = ${f1(r.S1, 1)} m²`, sub: 'mặt cầu đầy đủ 4πr²', color: '#0b8f8c', dy: 10});
     at('sh2', rig.pts.sh2, {text: `S₂ = ${f1(r.S2, 1)} m²`, sub: 'mặt cầu 2 (gấp 4)', color: '#e8590c', dy: 10});
     at('cone', rig.pts.spkPart, {text: 'MÀNG LOA', sub: 'rung tạo sóng âm', color: INK, part: true, dy: 40, dx: 30, a: part});
   }
