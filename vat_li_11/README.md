@@ -8,7 +8,7 @@ Mỗi file là một trang HTML chạy độc lập, không cần mạng. Bấm 
 | `W2_song_ngang_song_doc_3D.html` | 7 | Sóng ngang, sóng dọc trên lò xo (vùng nén, dãn), năng lượng, cường độ sóng I = P/(4πr²) | 18 |
 | `W3_song_dien_tu_3D.html` | 8 | Sóng điện từ: E, B vuông góc, c = λf, thang sóng, anten thu quay (phân cực) | 16 |
 | `W4_giao_thoa_song_3D.html` | 9 | Giao thoa sóng nước hai nguồn: Δd, cực đại, cực tiểu, hypebol, cùng pha và ngược pha | 18 |
-| `W4B_giao_thoa_anh_sang_3D.html` | 9 | Giao thoa ánh sáng, thí nghiệm khe Young: i = λD/a, đo λ, ánh sáng trắng | 19 |
+| `W4B_giao_thoa_anh_sang_3D.html` | 9 | Giao thoa ánh sáng, thí nghiệm khe Young: i = λD/a, đo λ, ánh sáng trắng | 20 |
 | `W5_song_dung_3D.html` | 10 | Sóng dừng: nút, bụng, L = nλ/2, cộng hưởng, sóng tới và phản xạ | 17 |
 
 Chương 2 Sóng đã đủ các bài trong kế hoạch (xem `studio/phieu/`).

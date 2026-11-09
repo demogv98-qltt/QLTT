@@ -36,10 +36,10 @@ const tour = {enabled: true, run: true, t0: 0, ev: 0, last: -1};
 let lastInput = 0, viewName = 'hero', preset = -1, followBlend = 1, txSmooth = 0, lessonH = 0, shift = 0, off = {az: 0, el: 0, k: 1};
 const cam = {az: 14, el: 12, d: 24, tx: 0, ty: 1, tz: 0};
 const VIEWFN = {
-  hero: (r, s) => [-26, 13, 3.6 + 1.25 * s.D, s.D / 2 - 0.15, AX - 0.12, 0, 0],
-  top: (r, s) => [0, 84, 4.2 + 1.3 * s.D, s.D / 2 - 0.15, AX, 0, 0],
+  hero: (r, s) => [-26, 14, 4.6 + 1.3 * s.D, s.D / 2 - 0.45, AX - 0.12, 0, 0],
+  top: (r, s) => [0, 84, 4.8 + 1.3 * s.D, s.D / 2 - 0.45, AX, 0, 0],
   screen: (r, s) => [-60, 8, 1.8, s.D, AX, 0, 0],
-  slits: () => [-40, 10, 1.7, -0.1, AX, 0, 0],
+  slits: () => [-30, 22, 2.6, -0.45, AX, 0, 0],
 };
 const DURATION = 62;
 const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero'], [8, 'view', 'screen'], [12, 'x', 2.6], [16, 'x', 1.3], [20, 'view', 'top'], [24, 'preset', 1], [24.1, 'view', 'hero'], [32, 'preset', 2], [32.1, 'view', 'screen'], [40, 'view', 'slits'], [41, 'td', true], [49, 'td', false], [50, 'view', 'hero'], [56, 'preset', 0]];
@@ -80,12 +80,13 @@ const proj = (p) => st.project(rig.worldPt(p));
 function labelItems(r, s, td) {
   const items = [], part = clamp((td - 0.7) / 0.3, 0, 1), at = (id, p, o) => { const q = proj(p); items.push({id, x: q.x, y: q.y, visible: q.visible, a: 1, ...o}); };
   at('laser', rig.pts.laser, {text: s.white ? 'NGUỒN SÁNG TRẮNG' : `LASER ${f1(s.wl, 0)} nm`, sub: s.white ? 'nhiều bước sóng' : 'ánh sáng đơn sắc', color: INK, dy: -34});
-  at('plate', rig.pts.plate, {text: 'HAI KHE HẸP', sub: `cách nhau a = ${f1(s.a, 2)} mm`, color: INK, dy: -30, dx: 40});
+  at('s0', rig.pts.s0, {text: 'KHE ĐƠN S₀', sub: 'nhiễu xạ → sóng kết hợp', color: INK, dy: -30, dx: -30});
+  at('plate', rig.pts.plate, {text: 'HAI KHE S₁, S₂', sub: `cách nhau a = ${f1(s.a, 2)} mm`, color: INK, dy: -30, dx: 50});
+  at('sheet', rig.pts.sheet, {text: 'HAI SÓNG CHỒNG CHẤT', sub: 'vẽ minh hoạ, λ phóng to', color: '#0b8f8c', dy: 36, dx: 40});
   at('screen', rig.pts.screen, {text: 'MÀN', sub: `cách khe D = ${f1(s.D, 1)} m`, color: INK, dy: -30});
   at('cursor', rig.pts.cursor, {text: `P · x = ${f1(s.x, 1)} mm`, sub: r.kind === 'max' ? 'vân sáng' : r.kind === 'min' ? 'vân tối' : 'trung gian', color: '#d62839', dy: 40, dx: -20});
   at('ruler', rig.pts.ruler, {text: 'THƯỚC mm', sub: 'đo khoảng vân i', color: INK, dy: 40, dx: 30});
-  at('win', rig.pts.win, {text: 'KÍNH CHẮN SÁNG + THẤU KÍNH', sub: 'ghi tên khi bóc tách', color: INK, part: true, dy: 40, a: part * 0.0});
-  at('lasbody', rig.pts.laser, {text: 'DIOT LASER', sub: 'phát ánh sáng kết hợp', color: INK, part: true, dy: 44, dx: -20, a: part});
+  at('lasbody', rig.pts.laser, {text: 'DIOT LASER', sub: 'phát chùm sáng đơn sắc', color: INK, part: true, dy: 44, dx: -20, a: part});
   return items;
 }
 

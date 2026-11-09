@@ -23,7 +23,7 @@ export function createUI(app, hooks) {
     ${sl('wl', 'λ bước sóng (nm)', WL[0], WL[1], 5, OR)}<div class="spec"></div>${sl('a', 'a khoảng cách hai khe (mm)', A_RANGE[0], A_RANGE[1], 0.05, TL)}${sl('D', 'D khoảng cách khe – màn (m)', D_RANGE[0], D_RANGE[1], 0.1, PU)}${sl('x', 'Con trỏ P · vị trí x trên màn (mm)', -HALF * 1000, HALF * 1000, 0.1, RD)}
     <div class="ptitle" style="margin-top:2px"><span>THÍ NGHIỆM MẪU</span><span>PRESETS</span></div>
     ${PRESETS.map((p, i) => `<button class="pre" data-i="${i}" style="padding:5px 10px;margin-bottom:5px"><b style="font-size:13px">${p.vi}</b><span>${p.note}</span></button>`).join('')}
-    <button class="btn big" id="b-td" style="margin-top:4px">TEARDOWN · BÓC TÁCH<small>[T] laser · tấm hai khe</small></button>
+    <button class="btn big" id="b-td" style="margin-top:4px">TEARDOWN · BÓC TÁCH<small>[T] laser · khe đơn · hai khe</small></button>
     <button class="btn out" id="b-tour"><i></i>AUTO-TOUR</button>
     <div class="views"><button data-v="hero">1<br>TỔNG THỂ</button><button data-v="top">2<br>TỪ TRÊN</button><button data-v="screen">3<br>MÀN</button><button data-v="slits">4<br>HAI KHE</button></div></div>`));
   const B = {top: 84, bottom: 870};

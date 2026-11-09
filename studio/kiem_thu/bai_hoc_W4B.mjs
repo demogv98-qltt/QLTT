@@ -18,7 +18,7 @@ const wrongThenRight = async (bad, good, tag) => { await page.click(`.opt.sopt[d
 const slide = async (id, v) => { await page.evaluate(([id, v]) => { const e = document.querySelector('#s-' + id); e.value = v; e.dispatchEvent(new Event('input', {bubbles: true})); }, [id, v]); await wait(500); };
 await page.click('#start'); await wait();
 chk(!(await doneNow()), 'B1 chưa chọn góc nhìn chưa đạt:'); await page.click('.views button[data-v="screen"]'); await wait(600); chk(await waitDone(8000), 'B1 xem màn:'); await next();
-await wrongThenRight(1, 0, 'B2');
+await wrongThenRight(1, 0, 'B1b'); await wrongThenRight(1, 0, 'B2');
 await page.fill('#ans', '1,3'); await page.click('#chk'); await wait(300); chk((await txt()).includes('Chưa khớp'), 'B3 nhập sai (1,3):'); chk(await predict('2,6'), 'B3 i=2,6:'); await next();
 await slide('x', 2.6); chk(await waitDone(8000), 'B4 P ở vân sáng bậc 1:'); await next();
 chk(await predict('1'), 'B5 Δd=1λ:'); await next();
