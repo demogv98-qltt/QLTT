@@ -135,3 +135,12 @@ là lỗi thật — xem comment trong file đó để hiểu rõ pattern.
 Xem mục "Trạng thái hiện tại" trong `README.MD`. Việc kế tiếp thầy có thể yêu
 cầu: mã học sinh ngắn + QR VietQR cho thanh toán (đã có trong backlog, chưa
 làm — thầy đã ưu tiên các việc khác trước).
+
+## Quy tắc dựng mô phỏng 3D (bài học từ các lỗi đã gặp)
+
+- **Không có vật nào được lơ lửng.** Mọi dây phải nối vào một vật ở cả hai đầu (điểm treo cố định ở trên, đầu dưới gắn vật);
+  mọi vật nặng phải treo trên dây/móc hoặc đặt trên vật khác; ván, thước, máy phải có chân/giá đỡ chạm sàn hoặc bàn.
+  Lỗi đã gặp: con lắc xoay dây ngược chiều (`rotation.z = -th` phải là `+th`), cảm biến cách khối nặng 4 cm, dây dừng cách vật 10 cm,
+  máy rung và ván không có giá, cổng quang treo giữa không trung.
+- **Trước khi giao một mô phỏng:** chạy `studio/kiem_thu/audit_khop_noi.mjs` (tự tìm đầu dây không chạm gì và cụm vật không chạm sàn),
+  chụp ít nhất 3 góc và NHÌN ảnh. Kiểm thử số liệu không phát hiện được lỗi hình.

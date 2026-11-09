@@ -33,8 +33,9 @@ export function createRig(scene) {
   for (const x of [-0.8, 5.2]) { add(root, new THREE.BoxGeometry(0.5, 0.06, 0.5), mat(COL.dark, {metalness: 0.4}), x, 0.03, 0); add(root, new THREE.CylinderGeometry(0.02, 0.02, 0.9, 12), mat(COL.steel, {metalness: 0.9}), x, 0.5, 0); }
   for (const x of [-0.35, 4.75]) add(root, new THREE.BoxGeometry(0.1, 0.34, 0.34), mat(COL.dark, {metalness: 0.4}), x, 0.2, 0);
   const board = add(root, new THREE.BoxGeometry(5.2, 1.0, 0.03), new THREE.MeshStandardMaterial({map: boardTex(), roughness: 0.85, metalness: 0}), 2.25, Y0, -0.32); board.castShadow = false;
-  add(root, new THREE.BoxGeometry(0.04, 0.9, 0.04), mat(COL.steel), -0.35, Y0 - 0.3, -0.3); add(root, new THREE.BoxGeometry(0.04, 0.9, 0.04), mat(COL.steel), 4.85, Y0 - 0.3, -0.3);
-  const ruler = add(root, new THREE.BoxGeometry(5.2, 0.075, 0.012), new THREE.MeshStandardMaterial({map: rulerTex(), roughness: 0.6, metalness: 0}), 2.25, 0.5, 0.1); ruler.castShadow = false;
+  for (const x of [-0.35, 4.85]) add(root, new THREE.BoxGeometry(0.05, 1.6, 0.05), mat(COL.steel), x, 0.8, -0.3); // board legs stand on the floor
+  add(root, new THREE.BoxGeometry(0.16, 0.45, 0.16), mat(COL.dark, {metalness: 0.4}), L + 0.2, 0.615, 0); // pillar under the absorber
+  const ruler = add(root, new THREE.BoxGeometry(5.2, 0.075, 0.012), new THREE.MeshStandardMaterial({map: rulerTex(), roughness: 0.6, metalness: 0}), 2.25, 0.43, 0.08); ruler.castShadow = false;
   // shaker: housing (ghost) around a Scotch yoke driven by a rotating crank
   const hM = gmat(0x2d6470, {metalness: 0.55, roughness: 0.5}); const housing = add(root, new THREE.BoxGeometry(0.62, 0.62, 0.3), hM, -0.55, Y0, 0);
   const hEdge = new THREE.LineSegments(new THREE.EdgesGeometry(housing.geometry), new THREE.LineBasicMaterial({color: COL.ink, transparent: true, opacity: 0})); housing.add(hEdge);
@@ -62,7 +63,7 @@ export function createRig(scene) {
   // wavelength bracket and amplitude gauge
   const bracket = new THREE.Group(); root.add(bracket); const bm = flat(COL.teal); const bLine = add(bracket, new THREE.BoxGeometry(1, 0.012, 0.012), bm, 0, 0, 0.02, false), bT1 = add(bracket, new THREE.BoxGeometry(0.012, 0.09, 0.012), bm, 0, 0, 0.02, false), bT2 = add(bracket, new THREE.BoxGeometry(0.012, 0.09, 0.012), bm, 0, 0, 0.02, false);
   const ampL = add(root, new THREE.BoxGeometry(0.012, 1, 0.012), flat(COL.ink), 0, 0, 0.03, false), ampT = add(root, new THREE.BoxGeometry(0.1, 0.012, 0.012), flat(COL.ink), 0, 0, 0.03, false), ampB = add(root, new THREE.BoxGeometry(0.1, 0.012, 0.012), flat(COL.ink), 0, 0, 0.03, false);
-  pts.crank = marker(root, -0.55, Y0 - 0.2, 0.1); pts.yoke = marker(root, -0.3, Y0 + 0.17, 0.1); pts.motor = marker(root, -0.55, Y0 + 0.36, 0.1); pts.bracket = marker(root, 0, 0, 0); pts.amp = marker(root, 0, 0, 0); pts.P = marker(root, 0, 0, 0); pts.Q = marker(root, 0, 0, 0); pts.absorber = marker(root, L + 0.2, Y0 + 0.28, 0); pts.ruler = marker(root, 3.6, 0.5, 0.1); pts.board = marker(root, 3.3, Y0 + 0.45, -0.3);
+  pts.crank = marker(root, -0.55, Y0 - 0.2, 0.1); pts.yoke = marker(root, -0.3, Y0 + 0.17, 0.1); pts.motor = marker(root, -0.55, Y0 + 0.36, 0.1); pts.bracket = marker(root, 0, 0, 0); pts.amp = marker(root, 0, 0, 0); pts.P = marker(root, 0, 0, 0); pts.Q = marker(root, 0, 0, 0); pts.absorber = marker(root, L + 0.2, Y0 + 0.28, 0); pts.ruler = marker(root, 3.6, 0.43, 0.08); pts.board = marker(root, 3.3, Y0 + 0.45, -0.3);
   const tmp = new THREE.Vector3();
   function update(r, s, td) {
     const e = td * td * (3 - 2 * td);
@@ -79,7 +80,7 @@ export function createRig(scene) {
     p.needsUpdate = true; n.needsUpdate = true;
     beads.forEach((b, i) => b.position.set(i * 0.25, Y0 + u(s, i * 0.25, r.t), 0));
     const yp = Y0 + u(s, s.xP, r.t), yq = Y0 + u(s, s.xQ, r.t); bP.position.set(s.xP, yp, 0.0); bQ.position.set(s.xQ, yq, 0.0);
-    const drop = (m, x, yy) => { const h = yy - 0.54; m.scale.y = Math.max(0.01, h); m.position.set(x, 0.54 + h / 2, 0.1); }; drop(dP, s.xP, yp); drop(dQ, s.xQ, yq);
+    const drop = (m, x, yy) => { const h = yy - 0.47; m.scale.y = Math.max(0.01, h); m.position.set(x, 0.47 + h / 2, 0.08); }; drop(dP, s.xP, yp); drop(dQ, s.xQ, yq);
     // bracket between two consecutive crests, amplitude gauge at the first crest
     const cr = r.crests, hb = Y0 + s.A + 0.2;
     bracket.visible = cr.length >= 2; if (bracket.visible) { const x1 = cr[0], x2 = cr[1]; bLine.scale.x = x2 - x1; bLine.position.set((x1 + x2) / 2, hb, 0.02); bT1.position.set(x1, hb, 0.02); bT2.position.set(x2, hb, 0.02); pts.bracket.position.set((x1 + x2) / 2, hb, 0.02); }

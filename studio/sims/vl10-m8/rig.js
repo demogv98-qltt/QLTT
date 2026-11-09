@@ -23,7 +23,7 @@ function makeArrow(color) {
   g.userData.set = (len) => { const sg = len < 0 ? -1 : 1, l = Math.abs(len); g.visible = l > 0.02; const hl = Math.min(0.1, l * 0.5); shaft.scale.y = Math.max(0.001, l - hl); shaft.position.y = sg * (l - hl) / 2; head.scale.setScalar(hl / 0.1); head.position.y = sg * (l - hl / 2); head.rotation.x = sg < 0 ? Math.PI : 0; g.userData.tip.position.y = sg * l; };
   g.userData.tip = marker(g); return g;
 }
-const AY = 2.6, AX = 0.13, Y0 = 1.5, TY = 1.62; // Atwood pulley height / half spacing / rest height; table height
+const PXC = 1.8, AY = 2.6, AX = 0.13, Y0 = 1.5, TY = 1.62; // Atwood pulley height / half spacing / rest height; table height
 export function createRig(scene) {
   const root = new THREE.Group(); scene.add(root); const iron = mat(0x353a42, {metalness: 0.35, roughness: 0.78}), pts = {};
   // ---------------- shared pulley (moves between the two set-ups)
@@ -40,7 +40,7 @@ export function createRig(scene) {
   const A = new THREE.Group(); root.add(A);
   box(A, 1.4, 0.12, 0.8, iron, 0, 0.06, 0); box(A, 0.12, 2.7, 0.12, mat(0x2d6470), 0, 1.4, -0.3); box(A, 0.12, 0.12, 0.38, mat(0x2d6470), 0, 2.7, -0.12); cylZ(A, 0.025, 0.4, mat(COL.steel), 0, AY, -0.05);
   const ruler = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 2.3), new THREE.MeshBasicMaterial({map: rulerTexture()})); ruler.position.set(-0.5, 0.3 + 1.15, 0.0); A.add(ruler);
-  const mkMass = (color) => { const g = new THREE.Group(); const m = mat(color, {metalness: 0.8, roughness: 0.4}), body = add(g, new THREE.CylinderGeometry(1, 1, 1, 28), m); const slot = box(g, 0.02, 1, 0.2, mat(0x20252b), 0, 0, 0.0, false); add(g, new THREE.CylinderGeometry(0.01, 0.01, 0.1, 8), mat(COL.steel), 0, 0.5, 0, false); g.userData = {body, slot}; return g; };
+  const mkMass = (color) => { const g = new THREE.Group(); const m = mat(color, {metalness: 0.8, roughness: 0.4}), body = add(g, new THREE.CylinderGeometry(1, 1, 1, 28), m); const slot = box(g, 0.02, 1, 0.2, mat(0x20252b), 0, 0, 0.0, false); g.userData = {body, slot}; return g; };
   const mA1 = mkMass(COL.brass), mA2 = mkMass(0x6b7480); A.add(mA1, mA2);
   const sMat = gmat(0x14303c, {metalness: 0.4}), sensA = [box(A, 0.07, 0.1, 0.07, sMat, -AX, 0, 0), box(A, 0.07, 0.1, 0.07, sMat, AX, 0, 0)];
   const sEdge = sensA.map((m) => { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({color: COL.ink, transparent: true, opacity: 0})); m.add(e); return e; });
@@ -52,7 +52,7 @@ export function createRig(scene) {
   const cartWheels = []; for (const [x, z] of [[0.16, 0.18], [0.16, -0.18], [-0.16, 0.18], [-0.16, -0.18]]) { const w = add(cart, new THREE.CylinderGeometry(0.05, 0.05, 0.04, 20).rotateX(Math.PI / 2), mat(0x20252b), x, 0.05, z); cartWheels.push(w); }
   const loadBlocks = box(cart, 0.3, 0.1, 0.24, mat(0x6b7480, {metalness: 0.85}), 0, 0.31, 0); const tsC = box(cart, 0.07, 0.07, 0.07, sMat, 0.28, 0.17, 0), tsEdge = new THREE.LineSegments(new THREE.EdgesGeometry(tsC.geometry), new THREE.LineBasicMaterial({color: COL.ink, transparent: true, opacity: 0})); tsC.add(tsEdge);
   const hang = mkMass(COL.orange); C.add(hang); const strC1 = add(C, new THREE.CylinderGeometry(0.006, 0.006, 1, 6).rotateZ(Math.PI / 2), mat(0x20252b), 0, 0, 0, false), strC2 = add(C, new THREE.CylinderGeometry(0.006, 0.006, 1, 6), mat(0x20252b), 0, 0, 0, false);
-  add(C, new THREE.BoxGeometry(0.08, 0.3, 0.08), iron, 1.7, TY + 0.15, -0.1); box(C, 0.08, 0.08, 0.2, iron, 1.7, TY + 0.28, -0.0);
+  box(C, 0.14, 0.02, 0.16, iron, 1.58, TY + 0.01, -0.0); box(C, 0.2, 0.03, 0.04, iron, 1.7, TY + 0.055, -0.05); // clamp on the table edge and an arm to the pulley axle
   // ---------------- arrows
   const aT1 = makeArrow(COL.teal), aT2 = makeArrow(COL.teal), aW1 = makeArrow(COL.red), aW2 = makeArrow(COL.red); root.add(aT1, aT2, aW1, aW2);
   pts.m1 = marker(root); pts.m2 = marker(root); pts.sens1 = marker(root); pts.sens2 = marker(root); pts.cart = marker(root); pts.hang = marker(root); pts.tC = marker(root); pts.ruler = marker(root, -0.5, 1.8, 0.05);
@@ -66,18 +66,18 @@ export function createRig(scene) {
     if (isA) {
       pulley.position.set(0, AY, 0.0); const ang = (dir * dist) / 0.115; wheel.rotation.z = -ang; balls.forEach((b, i) => b.position.set(Math.cos((i / 8) * 6.283 - ang * 0.5) * 0.045, Math.sin((i / 8) * 6.283 - ang * 0.5) * 0.045, 0.04));
       const d1 = sizeMass(mA1, s.m1), d2 = sizeMass(mA2, s.m2); const y1 = Y0 + dir * dist, y2 = Y0 - dir * dist; // m2 heavier → goes down when dir > 0
-      mA1.position.set(-AX, y1, 0); mA2.position.set(AX, y2, 0); sensA[0].position.set(-AX, y1 + d1.h / 2 + 0.09, 0); sensA[1].position.set(AX, y2 + d2.h / 2 + 0.09, 0);
-      const top1 = y1 + d1.h / 2 + 0.14, top2 = y2 + d2.h / 2 + 0.14; strA1.position.set(-AX, (top1 + AY) / 2, 0); strA1.scale.y = Math.max(0.01, AY - top1); strA2.position.set(AX, (top2 + AY) / 2, 0); strA2.scale.y = Math.max(0.01, AY - top2);
+      mA1.position.set(-AX, y1, 0); mA2.position.set(AX, y2, 0); sensA[0].position.set(-AX, y1 + d1.h / 2 + 0.05, 0); sensA[1].position.set(AX, y2 + d2.h / 2 + 0.05, 0);
+      const top1 = y1 + d1.h / 2 + 0.1, top2 = y2 + d2.h / 2 + 0.1; strA1.position.set(-AX, (top1 + AY) / 2, 0); strA1.scale.y = Math.max(0.01, AY - top1); strA2.position.set(AX, (top2 + AY) / 2, 0); strA2.scale.y = Math.max(0.01, AY - top2);
       arcS.visible = true; arcS.position.set(0, AY, 0); strA1.visible = strA2.visible = true; strC1.visible = strC2.visible = false;
       aT1.position.set(-AX - 0.1, y1 + d1.h / 2, 0.15); aT1.userData.set(VS * r.T); aW1.position.set(-AX - 0.1, y1, 0.15); aW1.userData.set(-VS * r.F1);
       aT2.position.set(AX + 0.1, y2 + d2.h / 2, 0.15); aT2.userData.set(VS * r.T); aW2.position.set(AX + 0.1, y2, 0.15); aW2.userData.set(-VS * r.F2); aW2.visible = true;
       pts.m1.position.set(-AX, y1, 0.0); pts.m2.position.set(AX, y2, 0.0); pts.sens1.position.copy(sensA[0].position); pts.sens2.position.copy(sensA[1].position);
       pts.tC.position.set(0, -10, 0);
     } else {
-      pulley.position.set(1.7, TY + 0.2, 0.0); const ang = dist / 0.115; wheel.rotation.z = -ang; balls.forEach((b, i) => b.position.set(Math.cos((i / 8) * 6.283 - ang * 0.5) * 0.045, Math.sin((i / 8) * 6.283 - ang * 0.5) * 0.045, 0.04));
+      pulley.position.set(PXC, TY + 0.055, 0.0); const ang = dist / 0.115; wheel.rotation.z = -ang; balls.forEach((b, i) => b.position.set(Math.cos((i / 8) * 6.283 - ang * 0.5) * 0.045, Math.sin((i / 8) * 6.283 - ang * 0.5) * 0.045, 0.04));
       const x0 = -0.8, cx = x0 + dist; cart.position.set(cx, TY, 0); cartWheels.forEach((w) => (w.rotation.z = -dist / 0.05)); const dh = sizeMass(hang, s.m); sizeMass(mA1, 0.1);
-      const hy = TY - 0.45 - dist; hang.position.set(1.7 + 0.115, hy, 0); const topH = hy + dh.h / 2 + 0.1;
-      const x1 = cx + 0.3, x2 = 1.7 + 0.115; strC1.position.set((x1 + x2) / 2, TY + 0.2 + 0.115 - 0.05 * 0, 0); strC1.scale.x = Math.max(0.01, x2 - x1); strC1.position.y = TY + 0.17; strC2.position.set(x2, (TY + 0.2 + 0.0 + topH) / 2, 0); strC2.scale.y = Math.max(0.01, TY + 0.2 - topH);
+      const hy = TY - 0.45 - dist; hang.position.set(PXC + 0.115, hy, 0); const topH = hy + dh.h / 2;
+      const x1 = cx + 0.315, x2 = PXC + 0.115; strC1.position.set((x1 + x2) / 2, TY + 0.2 + 0.115 - 0.05 * 0, 0); strC1.scale.x = Math.max(0.01, x2 - x1); strC1.position.y = TY + 0.17; strC2.position.set(x2, (TY + 0.055 + topH) / 2, 0); strC2.scale.y = Math.max(0.01, TY + 0.055 - topH);
       strC1.visible = strC2.visible = true; strA1.visible = strA2.visible = false; arcS.visible = false; loadBlocks.visible = s.M > 0.5; loadBlocks.scale.y = Math.min(3, 0.4 + s.M * 0.6);
       aT1.position.set(cx + 0.3, TY + 0.4, 0.2); aT1.rotation.z = -Math.PI / 2; aT1.userData.set(VS * r.T); aW1.position.set(x2 + 0.14, hy, 0.15); aW1.rotation.z = 0; aW1.userData.set(-VS * r.F1); aT2.position.set(x2 + 0.14, topH, 0.15); aT2.rotation.z = 0; aT2.userData.set(VS * r.T); aW2.visible = false;
       pts.cart.position.set(cx, TY + 0.45, 0); pts.hang.position.set(x2, hy, 0); pts.tC.position.set(cx + 0.28, TY + 0.17, 0.0); pts.m1.position.set(cx, TY + 0.45, 0); pts.m2.position.set(x2, hy, 0); pts.sens1.position.set(cx + 0.28, TY + 0.25, 0.05); pts.sens2.position.set(x2, topH, 0);

@@ -35,8 +35,11 @@ export function createRig(scene) {
   const hook = add(root, new THREE.TorusGeometry(0.012, 0.0035, 8, 18), mat(COL.steel), 0, 1.5 - 0.01, 0, false); hook.rotation.y = Math.PI / 2;
   // ruler
   const ruler = add(root, new THREE.BoxGeometry(0.05, 0.85, 0.008), new THREE.MeshStandardMaterial({map: rulerTexture(), roughness: 0.6, metalness: 0}), RX, Y0 - 0.425, 0); ruler.material.map.wrapS = THREE.ClampToEdgeWrapping;
-  const mounts = []; for (const y of [Y0 + 0.02, Y0 - 0.86]) mounts.push(add(root, new THREE.CylinderGeometry(0.008, 0.008, 0.2, 10).rotateX(Math.PI / 2), mat(COL.steel), RX + 0.02, y, -0.08, false));
-  add(root, new THREE.BoxGeometry(0.01, 0.01, 0.14), mat(COL.steel), RX + 0.02, Y0 + 0.02, -0.06, false);
+  // the ruler is held by two arms: a clamp on the stand rod, an arm passing behind the spring, a short pin into the back of the ruler
+  const mounts = []; for (const y of [Y0 + 0.02, Y0 - 0.86]) {
+    add(root, new THREE.BoxGeometry(0.05, 0.05, 0.12), mat(COL.dark, {metalness: 0.4}), -0.5, y, -0.05, false);
+    add(root, new THREE.CylinderGeometry(0.007, 0.007, RX + 0.02 + 0.5, 10).rotateZ(Math.PI / 2), mat(COL.steel, {metalness: 0.9}), (RX + 0.02 - 0.5) / 2, y, -0.1, false);
+    mounts.push(add(root, new THREE.CylinderGeometry(0.007, 0.007, 0.1, 10).rotateX(Math.PI / 2), mat(COL.steel), RX + 0.02, y, -0.05, false)); }
   const zero = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.002, 0.002), flat(COL.teal)); zero.position.set(0.0, Y0, 0.012); root.add(zero);
   // spring
   const springM = gmat(0xb8c2ca, {metalness: 0.85, roughness: 0.25}); const spring = new THREE.Mesh(helixGeo(L0), springM); spring.castShadow = true; spring.position.y = Y_TOP; root.add(spring); let lastLen = -1;

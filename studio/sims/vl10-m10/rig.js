@@ -57,6 +57,7 @@ export function createRig(scene) {
   const gateG = new THREE.Group(); pend.add(gateG); const gMat = gmat(0x2a3138, {metalness: 0.4});
   const gA = box(gateG, 0.16, 0.2, 0.1, gMat, 0, 0, 0.32), gB = box(gateG, 0.16, 0.2, 0.1, gMat, 0, 0, -0.32);
   const gEdges = [gA, gB].map((m) => { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({color: COL.ink, transparent: true, opacity: 0})); m.add(e); return e; });
+  const postM = mat(0x2d6470, {metalness: 0.5}), postA = add(gateG, new THREE.CylinderGeometry(0.02, 0.02, 1, 12), postM, 0, -0.5, 0.32, false), postB = add(gateG, new THREE.CylinderGeometry(0.02, 0.02, 1, 12), postM, 0, -0.5, -0.32, false);
   const led = add(gateG, new THREE.SphereGeometry(0.03, 12, 10), flat(0xff3b30), 0, 0, 0.27, false), diode = box(gateG, 0.05, 0.05, 0.03, mat(0x14303c), 0, 0, -0.27, false);
   const beamMat = flat(0xff3b30, {transparent: true, opacity: 0.8}), beam = add(gateG, new THREE.CylinderGeometry(0.008, 0.008, 0.54, 8).rotateX(Math.PI / 2), beamMat, 0, 0, 0, false);
   pts.bob = marker(pend); pts.gate = marker(gateG, 0, 0.12, 0.3); pts.led = marker(gateG, 0, 0.06, 0.27); pts.diode = marker(gateG, 0, 0.06, -0.27); pts.vTip = velArrow.userData.tip; pts.ruler = marker(pend, 1.15, 1.0, 0.1); pts.refl = marker(pend, -1.1, 0, 0);
@@ -88,7 +89,7 @@ export function createRig(scene) {
       bob.scale.setScalar(br); bob.position.set(bx, by, 0); string.position.set(bx / 2, (PIV_H + by) / 2, 0); string.scale.y = L; string.rotation.z = th;
       const th0 = s.th0 * D2R; ghostBob.scale.setScalar(br); ghostBob.position.set(L * Math.sin(th0), PIV_H - L * Math.cos(th0), 0); ghostBob.visible = !r.released || Math.abs(r.th) < th0 * 0.97;
       const low = PIV_H - L; refLine.position.set(0, low, 0); hLine.position.set(0.5 + (bx) / 2, by, 0.05); hLine.scale.x = Math.max(0.001, 1.15 - bx - 0.0); hLine.position.x = (bx + 1.15) / 2; hLine.visible = true;
-      gateG.position.set(0, low, 0); gateG.visible = true; led.material.color.setHex(Math.abs(bx) < br * 1.1 ? 0xaa2222 : 0xff3b30); beamMat.opacity = Math.abs(bx) < br * 1.1 ? 0.15 : 0.85;
+      gateG.position.set(0, low, 0); gateG.visible = true; { const len = Math.max(0.02, low - 0.12 - 0.1); for (const p of [postA, postB]) { p.scale.y = len; p.position.y = -0.1 - len / 2; } } led.material.color.setHex(Math.abs(bx) < br * 1.1 ? 0xaa2222 : 0xff3b30); beamMat.opacity = Math.abs(bx) < br * 1.1 ? 0.15 : 0.85;
       const vt = r.v; velArrow.position.set(bx, by, 0.0); velArrow.rotation.z = th; velArrow.userData.set(0.12 * vt);
       pts.bob.position.set(bx, by - br - 0.05, 0); pts.refl.position.set(-1.1, low, 0);
       prot.position.set(0, PIV_H - 1.0 - 0.0, -0.42); prot.scale.setScalar(1);

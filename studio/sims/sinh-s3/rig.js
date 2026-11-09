@@ -48,6 +48,8 @@ const tube = (pts, r, seg = 60, closed = false) => new THREE.TubeGeometry(new TH
 
 export function createRig(scene) {
   const root = new THREE.Group(); root.position.y = HY; scene.add(root); const pts = {};
+  // display stand: a round base and a short pillar under the apex, so the specimen does not hang in the air
+  { const sm = new THREE.MeshStandardMaterial({color: 0x9fb0bc, roughness: 0.5, metalness: 0.2}); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.05, 40), sm); base.position.set(0.45, 0.025, 0.02); base.receiveShadow = true; scene.add(base); const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.3, 20), sm); post.position.set(0.45, 0.2, 0.02); post.castShadow = true; scene.add(post); }
   // soft studio light for the specimen: a cool rim from behind-left and a warm fill from the right
   const rim = new THREE.DirectionalLight(0xbfd8ff, 1.0); rim.position.set(-3, 2.5, -3); scene.add(rim);
   const fill = new THREE.DirectionalLight(0xffe6d6, 0.55); fill.position.set(3.5, 0.5, 2.5); scene.add(fill);

@@ -35,6 +35,7 @@ export function createRig(scene) {
   add(root, new THREE.CylinderGeometry(0.2, 0.2, 0.06, 36), mat(0xc2cbd2, {metalness: 0.8}), 0, FLOOR - 0.05, 0); add(root, new THREE.CylinderGeometry(0.2, 0.2, 0.06, 36), mat(0xc2cbd2, {metalness: 0.8}), 0, TUBE_TOP + 0.04, 0);
   // photogate at the bottom, two housings that open in teardown
   const gMat = gmat(0x2a3138, {metalness: 0.4}), gA = box(root, 0.12, 0.14, 0.08, gMat, 0.0, FLOOR + 0.12, 0.27), gB = box(root, 0.12, 0.14, 0.08, gMat, 0.0, FLOOR + 0.12, -0.27);
+  for (const z of [0.27, -0.27]) box(root, 0.05, FLOOR + 0.05 - 0.14, 0.05, iron, 0, (0.14 + FLOOR + 0.05) / 2, z, false); // posts carrying the photogate
   const gEdges = [gA, gB].map((m) => { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({color: COL.ink, transparent: true, opacity: 0})); m.add(e); return e; });
   const led = add(root, new THREE.SphereGeometry(0.022, 12, 10), flat(0xff3b30), 0, FLOOR + 0.12, 0.24, false), diode = box(root, 0.04, 0.04, 0.03, mat(0x14303c), 0, FLOOR + 0.12, -0.24, false);
   const beamMat = flat(0xff3b30, {transparent: true, opacity: 0.75}); add(root, new THREE.CylinderGeometry(0.006, 0.006, 0.48, 8).rotateX(Math.PI / 2), beamMat, 0, FLOOR + 0.12, 0, false);
@@ -45,7 +46,7 @@ export function createRig(scene) {
   pts.mag = marker(mag, 0, 0.22, 0); pts.coil = marker(mag, 0, 0.1, 0.1);
   add(mag, new THREE.CylinderGeometry(0.02, 0.02, 0.04, 10), mat(COL.steel), -0.07, -0.02, 0, false); add(mag, new THREE.CylinderGeometry(0.02, 0.02, 0.04, 10), mat(COL.steel), 0.07, -0.02, 0, false);
   // ruler
-  const ruler = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 2.3), new THREE.MeshBasicMaterial({map: rulerTexture()})); ruler.position.set(-0.36, FLOOR + 1.15, 0.0); root.add(ruler); box(root, 0.03, 2.4, 0.03, iron, -0.46, FLOOR + 1.15, 0, false);
+  const ruler = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 2.3), new THREE.MeshBasicMaterial({map: rulerTexture()})); ruler.position.set(-0.36, FLOOR + 1.15, 0.0); root.add(ruler); box(root, 0.03, 2.51, 0.03, iron, -0.46, 0.14 + 1.255, 0, false);
   // objects: steel ball and a feather
   const ball = add(root, new THREE.SphereGeometry(0.035, 24, 16), mat(0xc2cbd2, {metalness: 0.95, roughness: 0.2})), feather = new THREE.Group(); root.add(feather);
   const vane = add(feather, new THREE.SphereGeometry(1, 16, 12), mat(0xf0e8d8, {metalness: 0, roughness: 0.9}), 0, -0.02, 0, false); vane.scale.set(0.014, 0.075, 0.03); add(feather, new THREE.CylinderGeometry(0.004, 0.003, 0.17, 6), mat(0xd9c9a4), 0, 0, 0, false);

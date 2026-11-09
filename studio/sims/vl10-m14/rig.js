@@ -38,6 +38,8 @@ export function createRig(scene) {
   const scale = add(root, new THREE.BoxGeometry(0.07, H_TANK, 0.008), new THREE.MeshStandardMaterial({map: scaleTex(), roughness: 0.6, metalness: 0}), -TW / 2 - 0.07, YS - H_TANK / 2, TD / 2 + 0.01, false); void scale;
   // probe: rod from a bridge, sensor head at depth h
   const bridge = add(root, new THREE.BoxGeometry(0.1, 0.03, TD + 0.1), mat(COL.dark), XP, TB + 1.52, 0);
+  add(root, new THREE.BoxGeometry(XB - XP + 0.3, 0.03, 0.1), mat(COL.dark), (XB + XP) / 2, TB + 1.52, 0); // overhead beam that also carries the cube
+  const cord = add(root, new THREE.CylinderGeometry(0.006, 0.006, 1, 8), mat(0x1a1a1a), XB, 0, 0, false);
   const rod = add(root, new THREE.CylinderGeometry(0.008, 0.008, 1, 12), mat(0xdfe6ea, {metalness: 0.9}), XP, 0, 0);
   const headG = new THREE.Group(); root.add(headG); const headM = gmat(0xdfe6ea, {metalness: 0.5, roughness: 0.3});
   const head = add(headG, new THREE.CylinderGeometry(0.035, 0.035, 0.07, 28).rotateX(Math.PI / 2), headM, 0, 0, 0);
@@ -61,7 +63,7 @@ export function createRig(scene) {
     // arrows at the probe head: pressure pushes from every direction with the same size
     const pl = r.pl, len = Math.min(0.5, pl * 0.00006);
     for (const a of pArr) { const d = a.userData.d; a.position.set(XP + d[0] * (0.05 + len), yh + d[1] * (0.05 + len), d[2] * (0.05 + len)); a.userData.set(len); a.visible = a.visible && s.h > 0.02; }
-    const wl = 0.55, topY = YS - r.z + s.a + 0.03;
+    const wl = 0.55, topY = YS - r.z + s.a + 0.03; cord.visible = !s.released; if (cord.visible) { const yt = YS - r.z + s.a, yb = TB + 1.52; cord.scale.y = Math.max(0.01, yb - yt); cord.position.set(XB, (yt + yb) / 2, 0); }
     aP.position.set(XB + s.a / 2 + 0.07, YS - r.z + s.a / 2, 0.0); aim(aP, 0, -1, 0); aP.userData.set(wl);
     aB.position.set(XB + s.a / 2 + 0.15, YS - r.z + s.a / 2, 0.0); aim(aB, 0, 1, 0); aB.userData.set(r.P > 0 ? wl * r.Fb / r.P : 0);
     void topY; void A_MAX; void H_TANK;

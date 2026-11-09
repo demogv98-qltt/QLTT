@@ -75,7 +75,7 @@ export function createRig(scene) {
     if (n2) {
       A.g.position.x = r.x; const ang = r.x / 0.15; A.wheels.forEach((w) => (w.rotation.z = -ang));
       const nb = Math.max(0, Math.min(9, Math.round(r.M) - 1));
-      for (let i = 0; i < nb; i++) { const b = blocks[i], j = i % 6, layer = Math.floor(i / 6); b.visible = true; b.position.set(j % 2 ? 0.22 : -0.12, 0.68 + layer * 0.21, (Math.floor(j / 2) - 1) * 0.32); }
+      for (let i = 0; i < nb; i++) { const b = blocks[i], j = i % 6, layer = Math.floor(i / 6); b.visible = true; b.position.set(j % 2 ? 0.22 : -0.12, 0.63 + layer * 0.2, (Math.floor(j / 2) - 1) * 0.32); }
       if (r.F > 0.01) bladeAng += dt * (8 + 3.5 * r.F); blades.rotation.x = bladeAng;
       A.sensors.forEach((s) => (s.visible = false));
       // air streaming backwards, speed and number follow the thrust

@@ -45,11 +45,12 @@ export function createRig(scene) {
   add(root, new THREE.BoxGeometry(4.4, 0.06, 0.34), mat(COL.dark, {metalness: 0.4}), 1.3, 0.36, 0);
   for (const x of [-0.7, 3.3]) add(root, new THREE.BoxGeometry(0.1, 0.34, 0.34), mat(COL.dark, {metalness: 0.4}), x, 0.2, 0);
   const board = add(root, new THREE.BoxGeometry(BW, 1.4, 0.03), new THREE.MeshStandardMaterial({map: boardTex(), roughness: 0.85, metalness: 0}), BX0 + BW / 2, Y0, -0.32); board.castShadow = false;
-  for (const x of [BX0 + 0.02, BX0 + BW - 0.02]) add(root, new THREE.BoxGeometry(0.04, 1.2, 0.04), mat(COL.steel), x, 0.8, -0.3);
-  const ruler = add(root, new THREE.BoxGeometry(BW, 0.07, 0.012), new THREE.MeshStandardMaterial({map: rulerTex(), roughness: 0.6, metalness: 0}), BX0 + BW / 2, 0.5, 0.1); ruler.castShadow = false;
+  for (const x of [BX0 + 0.02, BX0 + BW - 0.02]) add(root, new THREE.BoxGeometry(0.05, 1.85, 0.05), mat(COL.steel), x, 0.925, -0.3); // board legs stand on the floor
+  const ruler = add(root, new THREE.BoxGeometry(BW, 0.07, 0.012), new THREE.MeshStandardMaterial({map: rulerTex(), roughness: 0.6, metalness: 0}), BX0 + BW / 2, 0.43, 0.08); ruler.castShadow = false;
   // shaker with Scotch yoke (ghost housing)
   const cx = -0.5, hM = gmat(0x2d6470, {metalness: 0.55, roughness: 0.5}); const housing = add(root, new THREE.BoxGeometry(0.6, 0.6, 0.3), hM, cx, Y0, 0);
   const hEdge = new THREE.LineSegments(new THREE.EdgesGeometry(housing.geometry), new THREE.LineBasicMaterial({color: COL.ink, transparent: true, opacity: 0})); housing.add(hEdge);
+  add(root, new THREE.BoxGeometry(0.22, 0.46, 0.22), mat(COL.dark, {metalness: 0.4}), cx, 0.62, 0); // pillar that carries the shaker
   const disc = new THREE.Group(); disc.position.set(cx, Y0, 0); root.add(disc);
   add(disc, new THREE.CylinderGeometry(0.22, 0.22, 0.04, 40).rotateX(Math.PI / 2), mat(COL.steel, {metalness: 0.8, roughness: 0.3}), 0, 0, 0.02);
   const pin = add(disc, new THREE.CylinderGeometry(0.02, 0.02, 0.12, 14).rotateX(Math.PI / 2), mat(COL.orange, {metalness: 0.3}), 0.1, 0, 0.05, false);
@@ -66,6 +67,8 @@ export function createRig(scene) {
   const brEdge = new THREE.LineSegments(new THREE.EdgesGeometry(bridge.geometry), new THREE.LineBasicMaterial({color: COL.ink, transparent: true, opacity: 0})); bridge.add(brEdge);
   add(right, new THREE.BoxGeometry(0.3, 0.025, 0.025), mat(0x1a1a1a), 0.15, Y0 + 0.0, 0, false);
   add(right, new THREE.CylinderGeometry(0.07, 0.07, 0.03, 28).rotateX(Math.PI / 2), mat(COL.steel, {metalness: 0.8}), 0.3, Y0 - 0.0, 0);
+  add(right, new THREE.CylinderGeometry(0.01, 0.01, 0.14, 10).rotateX(Math.PI / 2), mat(COL.steel, {metalness: 0.9}), 0.3, Y0, -0.06, false); // axle
+  add(right, new THREE.CylinderGeometry(0.012, 0.012, Y0 - 0.39, 10), mat(COL.steel, {metalness: 0.9}), 0.3, (Y0 + 0.39) / 2, -0.12, false); add(right, new THREE.BoxGeometry(0.14, 0.03, 0.14), mat(COL.dark, {metalness: 0.4}), 0.3, 0.405, -0.1, false); // pulley stand
   const cord = add(right, new THREE.CylinderGeometry(0.008, 0.008, 1, 8), mat(0x1a1a1a), 0.37, 0.65, 0, false);
   const hang = new THREE.Group(); hang.position.set(0.37, 0.5, 0); right.add(hang); const wM = gmat(0xc8a24a, {metalness: 0.8, roughness: 0.3}), weights = []; add(hang, new THREE.BoxGeometry(0.04, 0.04, 0.04), mat(COL.steel), 0, 0.0, 0, false);
   for (let i = 0; i < 10; i++) weights.push(add(hang, new THREE.CylinderGeometry(0.075, 0.075, 0.025, 28), wM, 0, 0.03 + i * 0.028, 0));
@@ -73,7 +76,7 @@ export function createRig(scene) {
   const nodes = [], antis = [], nM = flat(COL.red), aM = flat(COL.green);
   for (let i = 0; i < 12; i++) { const a = add(root, new THREE.SphereGeometry(0.036, 14, 10), nM, 0, Y0, 0.03, false), b = add(root, new THREE.SphereGeometry(0.036, 14, 10), aM, 0, Y0, 0.03, false); nodes.push(a); antis.push(b); }
   const bm = flat(COL.teal), bracket = new THREE.Group(); root.add(bracket); const bL = add(bracket, new THREE.BoxGeometry(1, 0.012, 0.012), bm, 0, 0, 0.03, false), b1 = add(bracket, new THREE.BoxGeometry(0.012, 0.08, 0.012), bm, 0, 0, 0.03, false), b2 = add(bracket, new THREE.BoxGeometry(0.012, 0.08, 0.012), bm, 0, 0, 0.03, false);
-  pts.motor = marker(root, cx, Y0 + 0.34, 0.1); pts.crank = marker(root, cx, Y0 - 0.2, 0.1); pts.yoke = marker(root, cx + 0.2, Y0 + 0.15, 0.1); pts.bridge = marker(right, 0, 0.98, 0.0); pts.pulley = marker(right, 0.3, Y0 + 0.1, 0); pts.weights = marker(hang, 0.1, 0.1, 0); pts.node = marker(root, 0, 0, 0); pts.anti = marker(root, 0, 0, 0); pts.bracket = marker(root, 0, 0, 0); pts.inc = marker(root, 0.4, 0, 0); pts.refl = marker(root, 0.4, 0, 0); pts.ruler = marker(root, 2.6, 0.5, 0.1);
+  pts.motor = marker(root, cx, Y0 + 0.34, 0.1); pts.crank = marker(root, cx, Y0 - 0.2, 0.1); pts.yoke = marker(root, cx + 0.2, Y0 + 0.15, 0.1); pts.bridge = marker(right, 0, 0.98, 0.0); pts.pulley = marker(right, 0.3, Y0 + 0.1, 0); pts.weights = marker(hang, 0.1, 0.1, 0); pts.node = marker(root, 0, 0, 0); pts.anti = marker(root, 0, 0, 0); pts.bracket = marker(root, 0, 0, 0); pts.inc = marker(root, 0.4, 0, 0); pts.refl = marker(root, 0.4, 0, 0); pts.ruler = marker(root, 2.6, 0.43, 0.08);
   function update(r, s, td) {
     const e = td * td * (3 - 2 * td), w = 2 * Math.PI * s.f * r.t;
     for (const m of ghostMats) { m.opacity = m.userData.base * (1 - 0.88 * e); m.depthWrite = e < 0.04 && m.userData.base >= 1; }
@@ -84,7 +87,7 @@ export function createRig(scene) {
     const showC = s.showComp; ropeI.mesh.visible = ropeR.mesh.visible = showC;
     if (showC) { ropeI.set(L, (x) => shape(s, x, r.t).inc, Y0 + 0.42, 0.0); ropeR.set(L, (x) => shape(s, x, r.t).ref, Y0 - 0.42, 0.0); pts.inc.position.set(0.5, Y0 + 0.62, 0); pts.refl.position.set(0.5, Y0 - 0.62, 0); }
     // weights: one slotted weight per 50 g
-    const nw = Math.round(s.mass / 0.05); weights.forEach((m, i) => (m.visible = i < nw)); const top = 0.03 + nw * 0.028 + 0.02; hang.position.y = 0.5; cord.scale.y = Math.max(0.05, Y0 - (0.5 + top)); cord.position.set(0.37, 0.5 + top + (Y0 - (0.5 + top)) / 2, 0);
+    const nw = Math.round(s.mass / 0.05); weights.forEach((m, i) => (m.visible = i < nw)); const top = 0.03 + Math.max(0, nw - 1) * 0.028 + 0.0125; hang.position.y = 0.5; cord.scale.y = Math.max(0.05, Y0 - (0.5 + top)); cord.position.set(0.37, 0.5 + top + (Y0 - (0.5 + top)) / 2, 0);
     // nodes and antinodes
     nodes.forEach((m, i) => { const x = r.nodes[i]; m.visible = s.showNodes && x !== undefined; if (m.visible) m.position.set(x, Y0, 0.03); });
     antis.forEach((m, i) => { const x = r.anti[i]; m.visible = s.showNodes && x !== undefined; if (m.visible) m.position.set(x, Y0 + shape(s, x, r.t).u, 0.03); });
