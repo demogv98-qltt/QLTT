@@ -28,6 +28,9 @@ document.title = 'S3 · Tim và vòng tuần hoàn (Teardown)';
 const app = document.getElementById('app');
 const canvas = document.createElement('canvas'); canvas.id = 'gl'; app.appendChild(canvas);
 const st = createStage(canvas, W, H); st.renderer.localClippingEnabled = true;
+// anatomy illustration look: no technical floor grid, a soft studio backdrop
+st.scene.traverse((o) => { if (o.material && (o.material.type === 'ShaderMaterial' || o.material.type === 'ShadowMaterial')) o.visible = false; });
+{ const c = document.createElement('canvas'); c.width = 8; c.height = 512; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 512); gr.addColorStop(0, '#f4f8fb'); gr.addColorStop(0.55, '#dbe6ee'); gr.addColorStop(1, '#bfcfda'); g.fillStyle = gr; g.fillRect(0, 0, 8, 512); const t = new st.THREE.CanvasTexture(c); t.colorSpace = st.THREE.SRGBColorSpace; st.scene.background = t; }
 const rig = createRig(st.scene);
 const model = createModel();
 let T = 0, last = performance.now(), scale = 1, tier = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 700 ? 2 : 0;
@@ -36,13 +39,13 @@ const tour = {enabled: true, run: true, t0: 0, ev: 0, last: -1};
 let lastPh = '', lastInput = 0, viewName = 'hero', preset = -1, followBlend = 1, txSmooth = 0, lessonH = 0, shift = 0, off = {az: 0, el: 0, k: 1};
 const cam = {az: 14, el: 12, d: 24, tx: 0, ty: 1, tz: 0};
 const VIEWFN = {
-  hero: () => [8, 6, 6.6, 0, 1.3, 0, 0],
-  cut: () => [0, 2, 4.0, 0, 1.2, 0, 0],
-  vessels: () => [0, 4, 10.4, 0, 0.95, 0, 0],
-  side: () => [72, 8, 5.4, 0, 1.25, 0, 0],
+  hero: () => [12, 5, 7.0, 0.0, 1.25, 0, 0],
+  cut: () => [0, 2, 4.6, 0.0, 1.15, 0, 0],
+  circuit: () => [12, 5, 7.0, 0.0, 1.25, 0, 0],
+  side: () => [70, 6, 7.0, 0.0, 1.25, 0, 0],
 };
 const DURATION = 64;
-const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero'], [9, 'view', 'cut'], [10, 'td', true], [22, 'phase', 'atrial'], [25, 'phase', 'ventricular'], [28, 'phase', 'diastole'], [31, 'run'], [33, 'td', false], [34, 'view', 'vessels'], [42, 'preset', 1], [42.1, 'view', 'hero'], [50, 'preset', 0], [50.1, 'view', 'side'], [58, 'view', 'hero']];
+const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero'], [9, 'view', 'cut'], [10, 'td', true], [22, 'phase', 'atrial'], [25, 'phase', 'ventricular'], [28, 'phase', 'diastole'], [31, 'run'], [33, 'td', false], [34, 'view', 'circuit'], [42, 'preset', 1], [42.1, 'view', 'hero'], [50, 'preset', 0], [50.1, 'view', 'side'], [58, 'view', 'hero']];
 
 // heart sounds: a low "tùng" at the start of ventricular systole and a shorter "tắc" at its end (AudioContext starts on the first click)
 let ac = null;
@@ -58,6 +61,7 @@ const ui = createUI(app, {
   phase(id) { userInput(); setPhase(model, id); },
   sound() { userInput(); model.sound = !model.sound; },
   flow() { userInput(); model.flow = model.flow === 'on' ? 'off' : 'on'; },
+  labels() { userInput(); model.labMode = (model.labMode + 1) % 3; },
   preset(i) { userInput(); applyPreset(i); },
   speed(v) { model.speed = v; },
   teardown() { userInput(); setTd(!tdS.on); },
@@ -74,7 +78,7 @@ addEventListener('keydown', (e) => {
   if (e.altKey || e.ctrlKey || e.metaKey || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   const k = e.key.toLowerCase();
   if (k === 't') ui.root.querySelector('#b-td').click(); else if (k === 'a') ui.root.querySelector('#b-tour').click(); else if (k === ' ') ui.root.querySelector('#b-pause').click(); else if (k === 'r') ui.root.querySelector('#b-reset').click();
-  else if ('1234'.includes(k) && k) { userInput(); setView(['hero', 'cut', 'vessels', 'side'][Number(k) - 1]); } else return;
+  else if ('1234'.includes(k) && k) { userInput(); setView(['hero', 'cut', 'circuit', 'side'][Number(k) - 1]); } else return;
   e.preventDefault();
 });
 let drag = null;
@@ -90,24 +94,25 @@ fit(); addEventListener('resize', fit);
 const f1 = (x, d = 1) => x.toFixed(d).replace('.', ',').replace('-', '−');
 const proj = (p) => st.project(rig.worldPt(p));
 function labelItems(r, s, td) {
-  const items = [], part = clamp((td - 0.7) / 0.3, 0, 1), at = (id, p, o) => { const q = proj(p); items.push({id, x: q.x, y: q.y, visible: q.visible, a: 1, ...o}); };
+  const items = [], part = clamp((td - 0.7) / 0.3, 0, 1), mode = s.labMode;
+  const at = (id, p, group, o) => { if (mode === 2 || (mode === 1 && group !== 'ch')) return; const q = proj(p); items.push({id, x: q.x, y: q.y, visible: q.visible, a: 1, ...o}); };
   const RB = '#2b59c3', RR = '#c0392b';
-  at('LV', rig.pts.LV, {text: 'TÂM THẤT TRÁI', sub: `${f1(r.vol, 0)} mL · thành dày nhất`, color: RR, dy: 30, dx: 60});
-  at('RV', rig.pts.RV, {text: 'TÂM THẤT PHẢI', sub: 'bơm máu lên phổi', color: RB, dy: 50, dx: -80});
-  at('RA', rig.pts.RA, {text: 'TÂM NHĨ PHẢI', sub: 'nhận máu từ cơ thể', color: RB, dy: -10, dx: -100});
-  at('LA', rig.pts.LA, {text: 'TÂM NHĨ TRÁI', sub: 'nhận máu từ phổi', color: RR, dy: -40, dx: 90});
-  at('ao', rig.pts.aorta, {text: 'ĐỘNG MẠCH CHỦ', sub: `${f1(r.pao, 0)} mmHg`, color: RR, dy: -34, dx: 80});
-  at('pul', rig.pts.pul, {text: 'ĐỘNG MẠCH PHỔI', sub: 'máu đỏ sẫm lên phổi', color: RB, dy: -30, dx: -70});
-  at('svc', rig.pts.svc, {text: 'TĨNH MẠCH CHỦ TRÊN', sub: 'từ đầu, cổ, tay', color: RB, dy: -10, dx: -90});
-  at('ivc', rig.pts.ivc, {text: 'TĨNH MẠCH CHỦ DƯỚI', sub: 'từ thân và chân', color: RB, dy: 10, dx: -90});
-  at('pv', rig.pts.pv, {text: 'TĨNH MẠCH PHỔI', sub: 'máu đỏ tươi về tim', color: RR, dy: -20, dx: 70});
-  at('mit', rig.pts.mit, {text: 'VAN HAI LÁ', sub: r.avOpen ? 'đang mở' : 'đang đóng', color: INK, part: true, dy: 36, dx: 70, a: part});
-  at('tri', rig.pts.tri, {text: 'VAN BA LÁ', sub: r.avOpen ? 'đang mở' : 'đang đóng', color: INK, part: true, dy: 36, dx: -70, a: part});
-  at('aov', rig.pts.aov, {text: 'VAN ĐỘNG MẠCH CHỦ', sub: r.slOpen ? 'đang mở' : 'đang đóng', color: INK, part: true, dy: -50, dx: 40, a: part});
-  at('septum', rig.pts.septum, {text: 'VÁCH NGĂN TIM', sub: 'tách máu đỏ tươi và đỏ sẫm', color: INK, part: true, dy: 60, dx: 0, a: part});
-  at('coronary', rig.pts.coronary, {text: 'ĐỘNG MẠCH VÀNH', sub: 'nuôi dưỡng cơ tim', color: INK, part: true, dy: 90, dx: 90, a: part * 0.9});
-  at('body', rig.pts.body, {text: 'CÁC CƠ QUAN CỦA CƠ THỂ', sub: 'mao mạch: máu mất O₂', color: INK, part: false, dy: 0, dx: 0, a: viewName === 'vessels' ? 1 : 0});
-  at('lung', rig.pts.lung, {text: 'PHỔI', sub: 'mao mạch: máu nhận O₂', color: INK, part: false, dy: 0, dx: 0, a: viewName === 'vessels' ? 1 : 0});
+  at('RA', rig.pts.RA, 'ch', {text: 'TÂM NHĨ PHẢI', sub: 'nhận máu từ cơ thể', color: RB});
+  at('RV', rig.pts.RV, 'ch', {text: 'TÂM THẤT PHẢI', sub: 'bơm máu lên phổi', color: RB});
+  at('LA', rig.pts.LA, 'ch', {text: 'TÂM NHĨ TRÁI', sub: 'nhận máu từ phổi', color: RR});
+  at('LV', rig.pts.LV, 'ch', {text: 'TÂM THẤT TRÁI', sub: `${f1(r.vol, 0)} mL · thành dày nhất`, color: RR});
+  at('ao', rig.pts.aorta, 'ves', {text: 'ĐỘNG MẠCH CHỦ', sub: `${f1(r.pao, 0)} mmHg`, color: RR});
+  at('pul', rig.pts.pul, 'ves', {text: 'ĐỘNG MẠCH PHỔI', sub: 'máu đỏ sẫm lên phổi', color: RB});
+  at('svc', rig.pts.svc, 'ves', {text: 'TĨNH MẠCH CHỦ TRÊN', sub: 'máu từ đầu, tay', color: RB});
+  at('ivc', rig.pts.ivc, 'ves', {text: 'TĨNH MẠCH CHỦ DƯỚI', sub: 'máu từ thân, chân', color: RB});
+  at('pv', rig.pts.pv, 'ves', {text: 'TĨNH MẠCH PHỔI', sub: 'máu đỏ tươi về tim', color: RR});
+  at('cor', rig.pts.coronary, 'ves', {text: 'ĐỘNG MẠCH VÀNH', sub: 'nuôi dưỡng cơ tim', color: INK, a: 1 - part});
+  if (td > 0.7) {
+    at('mit', rig.pts.mit, 'ch', {text: 'VAN HAI LÁ', sub: r.avOpen ? 'đang mở' : 'đang đóng', color: INK, part: true, a: part});
+    at('tri', rig.pts.tri, 'ch', {text: 'VAN BA LÁ', sub: r.avOpen ? 'đang mở' : 'đang đóng', color: INK, part: true, a: part});
+    at('aov', rig.pts.aov, 'ch', {text: 'VAN ĐỘNG MẠCH CHỦ', sub: r.slOpen ? 'đang mở' : 'đang đóng', color: INK, part: true, a: part});
+    at('septum', rig.pts.septum, 'ch', {text: 'VÁCH NGĂN TIM', sub: 'tách máu đỏ tươi và đỏ sẫm', color: INK, part: true, a: part});
+  }
   return items;
 }
 
@@ -119,7 +124,6 @@ function frame(now) {
     while (tour.ev < EVENTS.length && EVENTS[tour.ev][0] <= c) { const [, kind, v] = EVENTS[tour.ev++]; if (kind === 'td') setTd(v); else if (kind === 'preset') applyPreset(v); else if (kind === 'view') setView(v); else if (kind === 'phase') setPhase(model, v); else if (kind === 'run') model.paused = false; }
     ui.setView('');
   }
-  model.showCircuit = viewName === 'vessels';
   advance(model, dt);
   const r = readout(model);
   if (r.ph.id !== lastPh) { if (r.ph.id === 'ventricular') thump(62, 0.16, 0.9); else if (r.ph.id === 'diastole') thump(95, 0.1, 0.55); lastPh = r.ph.id; }
@@ -130,8 +134,8 @@ function frame(now) {
   cam.az += (v[0] + off.az - cam.az) * k; cam.el += (v[1] + off.el - cam.el) * k; cam.d += (v[2] * off.k - cam.d) * k; cam.tx = txSmooth + (v[3] - txSmooth) * followBlend; cam.ty += (v[4] - cam.ty) * k; cam.tz += (v[5] - cam.tz) * k;
   st.setCenter(cam.tx); st.frame({az: cam.az * D2R, el: cam.el * D2R, d: cam.d, tx: cam.tx, ty: cam.ty, tz: cam.tz});
   lesson.tick(); shift += ((lessonH * 0.45) - shift) * 0.15; st.setShift(shift);
-  ui.update(r, model);
-  ui.setTeardown(tdS.on, td); ui.setTour(tour.run ? 'run' : tour.enabled ? 'wait' : 'off'); ui.labels(labelItems(r, model, td));
+  ui.update(r, model, viewName);
+  ui.setTeardown(tdS.on, td); ui.setTour(tour.run ? 'run' : tour.enabled ? 'wait' : 'off'); ui.labels(labelItems(r, model, td), viewName);
   if (!window.S3.shown) window.S3.shown = true;
   requestAnimationFrame(frame);
 }

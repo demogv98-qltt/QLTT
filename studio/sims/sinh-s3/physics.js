@@ -3,11 +3,11 @@
 export const HR_RANGE = [40, 180], EDV = 120, ESV = 50, SV = EDV - ESV, MMHG = {sys: 120, dia: 80};
 export const F_ATR = 0.125, F_VEN = 0.375;
 export const PRESETS = [
-  {id: 'a', vi: 'Lúc nghỉ ngơi', note: '75 nhịp/phút · chu kì 0,8 s', hr: 75},
-  {id: 'b', vi: 'Chạy bộ', note: '120 nhịp/phút · chu kì 0,5 s', hr: 120},
-  {id: 'c', vi: 'Nghỉ sâu (vận động viên)', note: '50 nhịp/phút · chu kì 1,2 s', hr: 50},
+  {id: 'a', short: 'Nghỉ ngơi', vi: 'Lúc nghỉ ngơi', note: '75 nhịp/phút · chu kì 0,8 s', hr: 75},
+  {id: 'b', short: 'Chạy bộ', vi: 'Chạy bộ', note: '120 nhịp/phút · chu kì 0,5 s', hr: 120},
+  {id: 'c', short: 'Vận động viên', vi: 'Nghỉ sâu (vận động viên)', note: '50 nhịp/phút · chu kì 1,2 s', hr: 50},
 ];
-export const createModel = () => ({hr: 75, phi: 0, t: 0, speed: 1, paused: false, sound: true, flow: 'on', beats: 0});
+export const createModel = () => ({hr: 75, phi: 0, t: 0, speed: 1, paused: false, sound: true, flow: 'on', beats: 0, labMode: 0});
 const sm = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
 /** phase name and local progress for a cycle fraction f in [0,1) */
 export function phaseOf(f) {

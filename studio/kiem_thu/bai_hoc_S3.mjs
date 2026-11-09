@@ -31,7 +31,7 @@ chk(await predict('5,25'), 'B13 lưu lượng 5,25:'); await next();
 chk(await predict('4500'), 'B14 4500 lần:'); await next();
 await wait(1800); chk(await waitDone(10000), 'B15 tiếng tim:'); await next();
 await wrongThenRight(1, 0, 'B16'); await wrongThenRight(1, 0, 'B17');
-await page.click('.views button[data-v="vessels"]'); await wait(800); chk(await waitDone(8000), 'B18 vòng tuần hoàn:'); await next();
+await page.click('.views button[data-v="circuit"]'); await wait(800); chk(await waitDone(8000), 'B18 vòng tuần hoàn:'); await next();
 const key = [2, 1, 1, 1, 1]; let sc = 0; for (const k of key) { await page.click(`.opt[data-k="${k}"]`); await wait(150); if ((await txt()).includes('Chính xác')) sc++; await page.click('#qnext'); await wait(250); }
 chk(sc === 5, `Trắc nghiệm ${sc}/5:`); console.log('KẾT:', (await txt()).slice(0, 100));
 // kiểm tra chu kì: nhịp tim đếm được trong 6 giây thật ở 75/phút
