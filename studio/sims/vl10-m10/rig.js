@@ -85,11 +85,11 @@ export function createRig(scene) {
     for (const l of gEdges) l.material.opacity = 0.55 * e; for (const l of wEdges) l.material.opacity = 0.55 * e;
     if (E) {
       const th = s.th, L = s.L, br = 0.1 + 0.035 * s.m, bx = L * Math.sin(th), by = PIV_H - L * Math.cos(th);
-      bob.scale.setScalar(br); bob.position.set(bx, by, 0); string.position.set(bx / 2, (PIV_H + by) / 2, 0); string.scale.y = L; string.rotation.z = -th;
+      bob.scale.setScalar(br); bob.position.set(bx, by, 0); string.position.set(bx / 2, (PIV_H + by) / 2, 0); string.scale.y = L; string.rotation.z = th;
       const th0 = s.th0 * D2R; ghostBob.scale.setScalar(br); ghostBob.position.set(L * Math.sin(th0), PIV_H - L * Math.cos(th0), 0); ghostBob.visible = !r.released || Math.abs(r.th) < th0 * 0.97;
       const low = PIV_H - L; refLine.position.set(0, low, 0); hLine.position.set(0.5 + (bx) / 2, by, 0.05); hLine.scale.x = Math.max(0.001, 1.15 - bx - 0.0); hLine.position.x = (bx + 1.15) / 2; hLine.visible = true;
       gateG.position.set(0, low, 0); gateG.visible = true; led.material.color.setHex(Math.abs(bx) < br * 1.1 ? 0xaa2222 : 0xff3b30); beamMat.opacity = Math.abs(bx) < br * 1.1 ? 0.15 : 0.85;
-      const vt = r.v; velArrow.position.set(bx, by, 0.0); velArrow.rotation.z = -th; velArrow.userData.set(0.12 * vt);
+      const vt = r.v; velArrow.position.set(bx, by, 0.0); velArrow.rotation.z = th; velArrow.userData.set(0.12 * vt);
       pts.bob.position.set(bx, by - br - 0.05, 0); pts.refl.position.set(-1.1, low, 0);
       prot.position.set(0, PIV_H - 1.0 - 0.0, -0.42); prot.scale.setScalar(1);
     } else {

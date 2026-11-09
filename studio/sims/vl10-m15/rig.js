@@ -49,7 +49,7 @@ export function createRig(scene) {
     for (const m of ghostMats) { m.opacity = m.userData.base * (1 - 0.85 * e); m.depthWrite = e < 0.04 && m.userData.base >= 1; }
     bedge.material.opacity = 0.5 * e; chipM.visible = e > 0.3;
     const L = s.l, th = r.theta, bx = L * Math.sin(th), by = Y_P - L * Math.cos(th);
-    bob.position.set(bx, by, 0); str.scale.y = L; str.position.set(bx / 2, (Y_P + by) / 2, 0); str.rotation.z = -th;
+    bob.position.set(bx, by, 0); str.scale.y = L; str.position.set(bx / 2, (Y_P + by) / 2, 0); str.rotation.z = th;
     mark.position.y = Y_P - L; pts.read.position.y = Y_P - L; void wtxt; void face;
     const txt = r.last == null ? '--.--' : r.last.toFixed(2); if (txt !== lastTxt) { draw(txt); lastTxt = txt; }
     root.updateMatrixWorld(true);

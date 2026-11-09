@@ -216,7 +216,7 @@ export function createRig(scene) {
     add(root, new THREE.CylinderGeometry(0.022, 0.022, 0.02, 6), mat(COL.orange, {metalness: 0.3}), fx, 0.04, fz);
   }
   box(root, 2.2, 0.012, 0.05, M.steel, 0, BASE_TOP + 0.006, 0);
-  box(root, 0.18, 0.5, 0.1, M.iron, 0, BASE_TOP + 0.25, -0.17);
+  box(root, 0.18, PIV - BASE_TOP, 0.1, M.iron, 0, (PIV + BASE_TOP) / 2, -0.17);
   box(root, 0.36, 0.28, 0.035, M.iron, 0, PIV, -0.14);
   box(root, 0.24, 0.05, 0.12, M.iron, 0, BASE_TOP + 0.025, -0.16);
 
