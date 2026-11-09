@@ -21,7 +21,7 @@ export const P = {
 
 export const PRESETS = [
   {id: 'balance', vi: 'Cân bằng chuẩn', en: 'Standard balance', note: 'τ₁ = τ₂', F1: 40, d1: 0.6, F2: 60, d2: 0.4},
-  {id: 'advantage', vi: 'Đòn bẩy lợi về lực', en: 'Force advantage', note: 'd₁ > d₂, lực nhỏ nâng vật nặng', F1: 22, d1: 0.9, F2: 60, d2: 0.3},
+  {id: 'advantage', vi: 'Đòn bẩy lợi về lực', en: 'Force advantage', note: 'd₁ > d₂, lực nhỏ nâng vật nặng', F1: 20, d1: 0.9, F2: 60, d2: 0.3},
   {id: 'unbalance', vi: 'Mất cân bằng động', en: 'Dynamic imbalance', note: 'τ₁ ≠ τ₂, quay có gia tốc', F1: 70, d1: 0.8, F2: 40, d2: 0.5},
 ];
 
