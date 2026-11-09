@@ -12,3 +12,4 @@ Mỗi file là một trang HTML chạy độc lập, không cần mạng. Bấm 
 
 Kế hoạch còn lại: W6 Đo tốc độ truyền âm, W3 Sóng điện từ (xem `studio/phieu/`).
 Số bài (◻) thầy đối chiếu với sách. Chưa thử trên máy có card đồ họa thật.
+| `W6_do_toc_do_am_3D.html` | 11 | Thực hành đo tốc độ truyền âm bằng ống cộng hưởng: v = 2f(l₂ − l₁), sai số | 15 |
