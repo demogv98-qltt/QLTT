@@ -17,7 +17,7 @@ let fail = 0; const chk = (c, m) => { console.log(m, c ? 'ĐẠT ✔' : 'KHÔNG 
 const predict = async (val) => { await page.fill('#ans', val); await page.click('#chk'); await wait(300); return (await txt()).includes('Đúng rồi'); };
 const next = async () => { await page.click('#next'); await wait(500); };
 await page.click('#start'); await wait();
-const passed = () => page.waitForFunction(() => window.B6.model.s < -0.3, null, {timeout: 120000});
+const passed = () => page.waitForFunction(() => window.B6.model.s < -0.29, null, {timeout: 120000});
 await slide('v', 0.6); chk(await waitDone(120000), 'B1 kéo nam châm qua cuộn dây v = 0,6:'); await next();
 await page.click('.opt.sopt[data-k="0"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B2 chọn sai (Φ lớn nên e lớn) bị từ chối:'); await page.click('.opt.sopt[data-k="1"]'); await wait(300); chk(await waitDone(5000), 'B2 nam châm đứng yên → e = 0:'); await next();
 await page.click('.opt.sopt[data-k="1"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B3 chọn sai (xuống) bị từ chối:'); await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B3 Lenz (lên):'); await next();

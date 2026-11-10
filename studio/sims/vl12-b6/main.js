@@ -72,7 +72,7 @@ const proj = (p) => st.project(rig.worldPt(p));
 function labelItems(r, s, td) {
   const items = [], part = clamp((td - 0.8) / 0.2, 0, 1), at = (id, p, o) => { const q = proj(p); items.push({id, x: q.x, y: q.y, visible: q.visible, ...o}); };
   at('magnet', rig.pts.magnet, {text: 'NAM CHÂM', sub: s.flip ? 'cực N hướng LÊN' : 'cực N hướng XUỐNG', color: RD, dy: -30, dx: 90, a: 1});
-  at('coil', rig.pts.coil, {text: `CUỘN DÂY · N = ${s.N} vòng`, sub: `Φ = ${f2(r.phi * 1e3, 1)} mWb · e = ${f2(r.e, 2)} V`, color: '#a86f00', dy: 40, dx: 110, a: 1});
+  at('coil', rig.pts.coil, {text: `CUỘN DÂY · N = ${s.N} vòng`, sub: `NΦ = ${f2(r.phiDown * 1e3, 1)} mWb · e = ${f2(r.e, 2)} V`, color: '#a86f00', dy: 40, dx: 110, a: 1});
   if (model.hand && Math.abs(r.i) > 5e-4 && !s.open) at('hand', rig.pts.hand, {text: 'BÀN TAY PHẢI', sub: 'bốn ngón: chiều dòng cảm ứng · ngón cái: chiều B cảm ứng', color: '#b06a2a', dy: -36, dx: 100, a: 1});
   at('gal', rig.pts.gal, {text: 'ĐIỆN KẾ', sub: `i = ${f2(r.i, 3)} A · thang ±${f2(fs, fs < 0.1 ? 2 : 1)} A`, color: GR, dy: -40, dx: 20, a: 1});
   at('tube', rig.pts.tube, {text: 'ỐNG THUỶ TINH', sub: 'quấn cuộn dây quanh ống', color: INK, part: true, dy: -30, dx: -100, a: part});
@@ -91,7 +91,7 @@ function frame(now) {
   }
   advance(model, dt);
   const r = readout(model);
-  let pk = 0; for (const p of model.hist.slice(-150)) pk = Math.max(pk, Math.abs(p.i)); pk = Math.max(pk, Math.abs(r.i)); const FS = [0.02, 0.1, 0.5, 2, 10]; if (pk > fs * 0.98) fs = FS.find((x) => x >= pk * 1.1) || 10; else if (pk < fs * 0.12 && model.hist.length > 100) fs = FS.find((x) => x >= Math.max(pk * 1.1, 0.02)) || 10;
+  { const vref = model.mode === 'fall' ? 3.4 : Math.max(Math.abs(model.vcmd), 0.3), est = 1.15 * model.N * 0.00577 * (model.Br / 0.4) * vref / model.R, FS = [0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20]; fs = FS.find((x) => x >= est) || 20; }
   const td = tdS.from + ((tdS.on ? 1 : 0) - tdS.from) * ease((T - tdS.t0) / 1.8); tdS.v = td;
   rig.update(r, model, td, fs, clamp(r.i / fs, -1.1, 1.1) * 50 * D2R);
   const v = VIEWFN[viewName](r, model), k = 1 - Math.exp(-dt / 0.3);

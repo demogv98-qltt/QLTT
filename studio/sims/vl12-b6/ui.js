@@ -13,7 +13,7 @@ export function createUI(app, hooks) {
   root.appendChild(el('<div class="chip"><b id="mode">NORMAL · NGUYÊN KHỐI</b><b id="tourchip">AUTO-TOUR</b></div>'));
   const row = (k, id, c) => `<div class="g3"><span class="k" style="white-space:nowrap;font-size:11px">${k}</span><span class="v" id="v${id}"></span><div class="bg"><i id="b${id}" style="background:${c}"></i></div></div>`;
   root.appendChild(el(`<div class="panel" id="left"><div class="ptitle"><span>SỐ LIỆU</span><span>TELEMETRY</span></div>
-    <div class="blk" style="--c:${OR}">${row('Φ (cuộn)', 'p', BL)}${row('e', 'e', OR)}${row('i', 'i', GR)}${row('v (↓ +)', 'v', PU)}${row('F hãm', 'F', RD)}</div>
+    <div class="blk" style="--c:${OR}">${row('NΦ (↓)', 'p', BL)}${row('e', 'e', OR)}${row('i', 'i', GR)}${row('v (↓ +)', 'v', PU)}${row('F hãm (↑)', 'F', RD)}</div>
     <div class="res" id="tag" style="margin:0 0 6px;padding:5px 10px"></div>
     <canvas class="gr" id="g1" width="680" height="300"></canvas><canvas class="gr" id="g2" width="680" height="300"></canvas>
     <table class="tb" id="tb"></table></div>`));
@@ -61,9 +61,9 @@ export function createUI(app, hooks) {
     update(r, s, fs) {
       root.querySelectorAll('#md button').forEach((b) => b.classList.toggle('on', b.dataset.m === s.mode)); $('t-hand').classList.toggle('on', s.hand); $('t-hand').textContent = s.hand ? 'Bàn tay phải: HIỆN' : 'Bàn tay phải: ẨN'; $('t-open').classList.toggle('on', s.open); $('t-open').textContent = s.open ? 'Mạch: HỞ (không dòng)' : 'Mạch: KÍN'; $('t-flip').classList.toggle('on', s.flip); $('t-flip').textContent = s.flip ? 'Cực N: HƯỚNG LÊN' : 'Cực N: XUỐNG';
       const set = (id, txt, bar, col) => { $('v' + id).innerHTML = txt; const b = $('b' + id); b.style.width = Math.min(100, Math.abs(bar) * 100) + '%'; if (col) b.style.background = col; };
-      set('p', `${f(r.phi * 1e3, 1)}<small>mWb</small>`, Math.abs(r.phi) / 0.06); set('e', `${f(r.e, 2)}<small>V</small>`, Math.abs(r.e) / 5); set('i', `${f(r.i, 3)}<small>A</small>`, Math.abs(r.i) / Math.max(fs, 1e-6)); set('v', `${f(-r.v, 2)}<small>m/s ↓</small>`, Math.abs(r.v) / 3.5); set('F', `${f(r.F, 2)}<small>N</small>`, Math.abs(r.F) / 3);
-      $('tag').innerHTML = r.mode === 'fall' ? (r.hit ? `Đã rơi xong: <b>t = ${f(r.tFall, 3)} s</b> · KE lúc chạm = ${f(r.KEhit, 3)} J · nhiệt toả ra trong dây Q = <b>${f(r.heat * 1e3, 1)} mJ</b>` : r.released ? `Đang rơi… t = ${f(r.tFall, 2)} s` : 'Bấm “THẢ nam châm”. Cuộn dây ở giữa ống; nam châm cách 30 cm phía trên.') : `Φ đổi dấu khi nam châm đi qua: e = −NΔΦ/Δt; e đạt cực đại <b>${f(r.emax, 2)} V</b> (từ lần đặt lại)`;
-      plot($('g1'), r.hist, 'phi', 'Φ qua cuộn', BL, 'mWb', 1e3); plot($('g2'), r.hist, 'e', 'e cảm ứng', OR, 'V', 1);
+      set('p', `${f(r.phiDown * 1e3, 1)}<small>mWb</small>`, Math.abs(r.phiDown) / 0.06); set('e', `${f(r.e, 2)}<small>V</small>`, Math.abs(r.e) / 5); set('i', `${f(r.i, 3)}<small>A</small>`, Math.abs(r.i) / Math.max(fs, 1e-6)); set('v', `${f(-r.v, 2)}<small>m/s ↓</small>`, Math.abs(r.v) / 3.5); set('F', `${f(r.F, 2)}<small>N</small>`, Math.abs(r.F) / 3);
+      $('tag').innerHTML = r.mode === 'fall' ? (r.hit ? `Đã rơi xong: <b>t = ${f(r.tFall, 3)} s</b> · KE lúc chạm = ${f(r.KEhit, 3)} J · nhiệt toả ra trong dây Q = <b>${f(r.heat * 1e3, 1)} mJ</b>` : r.released ? `Đang rơi… t = ${f(r.tFall, 2)} s` : 'Bấm “THẢ nam châm”. Cuộn dây ở giữa ống; nam châm cách 30 cm phía trên.') : `NΦ = từ thông toàn phần qua cuộn (chiều xuống). |NΦ| lớn nhất khi nam châm ở giữa cuộn; e = −d(NΦ)/dt đổi dấu khi nam châm đi qua. e cực đại <b>${f(r.emax, 2)} V</b>`;
+      plot($('g1'), r.hist, 'phi', 'NΦ (chiều xuống)', BL, 'mWb', 1e3); plot($('g2'), r.hist, 'e', 'e cảm ứng', OR, 'V', 1);
       $('tb').innerHTML = `<tr><th>v (m/s)</th><th>N</th><th>R (Ω)</th><th>e_max (V)</th></tr>` + (r.rows.length ? r.rows.map((q) => `<tr><td>${f(q.v, 2)}</td><td>${q.N}</td><td>${q.R}</td><td>${f(q.emax, 2)}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#6a8190">Chưa có số liệu · bấm “＋ Ghi e_max”</td></tr>');
     },
     labels(items) {

@@ -16,7 +16,7 @@ function makeArrow(color, w = 0.008) { const g = new THREE.Group(), m = flat(col
 function dialTexture(fs) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 360; const g = c.getContext('2d'); g.fillStyle = '#f7f4e8'; g.fillRect(0, 0, 512, 360); g.strokeStyle = '#14303c'; g.fillStyle = '#14303c'; g.textAlign = 'center'; g.font = 'bold 26px monospace';
   const cx = 256, cy = 300, R = 220; for (let k = -10; k <= 10; k++) { const a = (k / 10) * (50 * Math.PI / 180), big = k % 5 === 0, r1 = R, r0 = R - (big ? 28 : 16); g.lineWidth = big ? 4 : 2; g.beginPath(); g.moveTo(cx + r0 * Math.sin(a), cy - r0 * Math.cos(a)); g.lineTo(cx + r1 * Math.sin(a), cy - r1 * Math.cos(a)); g.stroke(); if (big) { const v = (k / 10) * fs; g.fillText((Math.abs(v) < 1 ? v.toFixed(2) : v.toFixed(1)).replace('.', ','), cx + (R - 52) * Math.sin(a), cy - (R - 52) * Math.cos(a) + 8); } }
-  g.font = 'bold 32px monospace'; g.fillText('A', cx, cy - 120); g.font = '20px monospace'; g.fillText('+ ⟲ : dòng ngược chiều kim đồng hồ (nhìn từ trên)', cx, 345);
+  g.font = 'bold 32px monospace'; g.fillText('A', cx, cy - 120); g.font = '17px monospace'; g.fillText('kim sang phải (+): dòng ngược chiều', cx, 336); g.fillText('kim đồng hồ khi nhìn từ trên xuống', cx, 355);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
 export function createRig(scene) {
@@ -51,14 +51,14 @@ export function createRig(scene) {
   const lead = (a, b, c) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([a, b, c].map((p) => new THREE.Vector3(...p)), false, 'centripetal'), 40, 0.0035, 6), mat(0x2a2f36, {metalness: 0.1, roughness: 0.7}));
   root.add(lead([0.06, YC + 0.0, 0.0], [0.2, YC - 0.1, 0.07], [GX + 0.05, TABLE + 0.18, 0])); root.add(lead([0.056, YC - 0.012, 0.0], [0.15, YC - 0.2, -0.08], [GX - 0.05, TABLE + 0.18, 0]));
   // bàn tay phải: bốn ngón theo chiều dòng cảm ứng (ngược chiều kim đồng hồ khi nhìn từ trên nếu e > 0), ngón cái chỉ chiều B cảm ứng
-  const handG = new THREE.Group(); root.add(handG); const handObj = createRightHand(0.068, {finger: 0.0085, start: 40 * Math.PI / 180}); handG.add(handObj); pts.hand = marker(handG, handObj.userData.tip.x, handObj.userData.tip.y, handObj.userData.tip.z);
+  const handG = new THREE.Group(); root.add(handG); const handObj = createRightHand(0.068, {finger: 0.0085, start: 40 * Math.PI / 180, thumb: 0.075}); handG.add(handObj); pts.hand = marker(handG, handObj.userData.tip.x, handObj.userData.tip.y, handObj.userData.tip.z);
   // mũi tên B cảm ứng (bên cạnh cuộn dây)
   const aB = makeArrow(0xe8590c, 0.007); root.add(aB);
   pts.coil = marker(root, 0.058, YC, 0); pts.magnet = marker(mag, MAG.a, 0, 0); pts.gal = marker(gal, 0.1, 0.12, 0.06); pts.tube = marker(root, -TR, YC + 0.28, 0); pts.cushion = marker(root, TR, YT0 + 0.01, 0); pts.arm = marker(root, 0, yArm, 0); pts.arrowB = marker(root, 0.09, YC, 0); pts.col = marker(root, colX, YC - 0.1, 0);
   void termL; void termR; void S_BOT; void yClamp;
   function update(r, s, td, fs, ang) {
     const e = td * td * (3 - 2 * td); for (const m of ghostMats) { m.opacity = m.userData.base * (1 - 0.85 * e); m.depthWrite = e < 0.04 && m.userData.base >= 1; }
-    const key = Math.round(s.N / 10); if (key !== coilKey) { coilKey = key; wind.geometry.dispose(); wind.geometry = lathe(TR + 0.006 + 0.012 * (s.N / 500)); }
+    const key = Math.round(s.N / 10); if (key !== coilKey) { coilKey = key; wind.geometry.dispose(); wind.geometry = lathe(TR + 0.004 + 0.004 * (s.N / 500)); }
     const ym = YC + r.s; mag.position.y = ym; mag.rotation.z = s.flip ? Math.PI : 0;
     const showThread = s.mode === 'motor' || (!r.released); const yTop = YC + 0.55 - 0.0; thread.visible = showThread; if (showThread) { const len = yTop - (ym + MAG.L / 2 + 0.012); thread.scale.y = Math.max(0.001, len); thread.position.set(0, ym + MAG.L / 2 + 0.012 + len / 2, 0); }
     const sgn = r.direction; dirs.forEach((c) => { const a = c.userData.a; c.visible = Math.abs(r.i) > 5e-4 && sgn !== 0; const tg = new THREE.Vector3(-Math.sin(a), 0, -Math.cos(a)).multiplyScalar(sgn || 1); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tg); });

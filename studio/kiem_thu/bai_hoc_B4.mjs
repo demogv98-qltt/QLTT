@@ -1,0 +1,35 @@
+import {createRequire} from 'node:module';
+const require = createRequire('/root/.claude/skills/teardown/node_modules/x.js');
+const {chromium} = require('playwright');
+const out = process.argv[2];
+const browser = await chromium.launch({executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--no-sandbox']});
+const page = await browser.newPage({viewport: {width: 1600, height: 900}});
+const errs = []; page.on('console', (m) => m.type() === 'error' && errs.push(m.text())); page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+await page.goto('file:///home/user/QLTT/teardown-out/dist/vl12-b4.html');
+await page.waitForFunction(() => window.B4 && window.B4.shown, null, {timeout: 40000});
+const txt = () => page.evaluate(() => document.querySelector('#lesson').innerText.replace(/\n+/g, ' ¦ '));
+const slide = (id, v) => page.evaluate(([id, v]) => { const s = document.querySelector('#s-' + id); s.value = v; s.dispatchEvent(new Event('input', {bubbles: true})); }, [id, v]);
+const wait = (ms = 700) => page.waitForTimeout(ms);
+const doneNow = async () => (await txt()).includes('✔');
+const waitDone = async (ms = 60000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await doneNow()) return true; await wait(400); } return false; };
+const P = await import('/home/user/QLTT/studio/sims/vl12-b4/physics.js');
+let fail = 0; const chk = (c, m) => { console.log(m, c ? 'ĐẠT ✔' : 'KHÔNG ĐẠT ✘'); if (!c) fail++; };
+const predict = async (val) => { await page.fill('#ans', val); await page.click('#chk'); await wait(300); return (await txt()).includes('Đúng rồi'); };
+const next = async () => { await page.click('#next'); await wait(500); };
+await page.click('#start'); await wait();
+await page.click('#b-tare'); chk(await waitDone(), 'B1 tare:'); await next();
+await slide('I', 1); await page.waitForFunction(() => window.B4.readout().settled, null, {timeout: 60000}); chk(await waitDone(), 'B2 I = 1 A:'); await next();
+await page.fill('#ans', '1'); await page.click('#chk'); await wait(300); chk((await txt()).includes('Chưa khớp'), 'B3 nhập sai (1 mN):'); chk(await predict('9.8'), 'B3 F = 9,8 mN:'); await next();
+for (const I of [0.5, 1.0, 1.5, 2.0, 2.5]) { await slide('I', I); await page.waitForFunction(() => window.B4.readout().settled, null, {timeout: 60000}); const n0 = await page.evaluate(() => window.B4.model.rows.length); await page.click('#b-rec'); await wait(200); chk((await page.evaluate(() => window.B4.model.rows.length)) === n0 + 1, `B4 ghi I=${I}:`); }
+chk(await waitDone(), 'B4 đủ 5 điểm:'); const reg = await page.evaluate(() => window.B4.readout().reg); console.log('  hồi quy:', JSON.stringify(reg)); await next();
+chk(await predict(reg.slope.toFixed(2)), `B5 hệ số góc = ${reg.slope.toFixed(2)} mN/A:`); await next();
+chk(await predict((reg.Bexp * 1e3).toFixed(1)), `B6 B = ${(reg.Bexp * 1e3).toFixed(1)} mT:`); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B7 chọn sai (nhiễu ngẫu nhiên) bị từ chối:'); await page.click('.opt.sopt[data-k="1"]'); await wait(300); chk(await waitDone(5000), 'B7 sai số hệ thống:'); await next();
+await page.click('#b-reveal'); chk(await waitDone(), 'B8 hiện B thật:'); console.log('  |B_đo − B_thật| / δB =', (Math.abs(reg.Bexp - 0.082) / reg.dB).toFixed(2)); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B9 đổi chiều → Δm giảm:'); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B10 N tăng → k tăng 5/3:'); await next();
+await page.click('#b-td'); await wait(6000); chk(await waitDone(), 'B11 teardown:'); await page.screenshot({path: out + '/L4-b11.png'}); await next();
+const key = [1, 1, 1, 1, 1]; let sc = 0; for (const k of key) { await page.click(`.opt[data-k="${k}"]`); await wait(150); if ((await txt()).includes('Chính xác')) sc++; await page.click('#qnext'); await wait(250); }
+chk(sc === 5, `Trắc nghiệm ${sc}/5:`); console.log('KẾT:', (await txt()).slice(0, 100));
+console.log('lỗi console:', JSON.stringify([...errs, ...(await page.evaluate(() => window.B4.errors))]), '| mục KHÔNG ĐẠT =', fail);
+await browser.close();
