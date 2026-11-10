@@ -10,9 +10,9 @@ export function makeLesson(act) {
     code: 'vl12-b7',
     title: 'Máy phát điện xoay chiều và máy biến áp',
     objectives: [
-      'Giải thích nguyên tắc máy phát điện: khung dây quay trong từ trường đều, từ thông Φ = NBS·cosωt biến thiên làm xuất hiện suất điện động e = NBSω·sinωt.',
+      'Giải thích nguyên tắc máy phát điện: khung dây quay trong từ trường đều, từ thông Φ (từ thông toàn phần qua N vòng) = NBS·cosθ, θ = ωt là góc giữa pháp tuyến khung và B, biến thiên làm xuất hiện suất điện động e = NBSω·sinωt.',
       'Nêu và dùng: E₀ = NBSω, tần số f = n (số vòng quay trong 1 s), giá trị hiệu dụng E = E₀/√2.',
-      'Giải thích máy biến áp (cảm ứng điện từ trong lõi thép chung): U₂/U₁ = N₂/N₁, I₁/I₂ ≈ N₂/N₁ khi tải nặng; hiệu suất và hao phí.',
+      'Giải thích máy biến áp (cảm ứng điện từ trong lõi thép chung): U₂/U₁ = N₂/N₁, I₁/I₂ ≈ N₂/N₁ khi dòng thứ cấp lớn hơn nhiều dòng từ hoá (tải nặng, R_tải nhỏ); hiệu suất và hao phí.',
       'Hiểu vì sao truyền tải điện đi xa phải dùng điện áp cao.',
     ],
     steps: [
@@ -28,9 +28,9 @@ export function makeLesson(act) {
       {type: 'do', title: 'Đổi sang biến áp tăng áp', text: 'Tăng N₂ lên 1000 vòng (giữ N₁ = 500, tải vẫn hở).', hints: ['Thanh trượt N₂.'], check: (c) => c.s.mode === 'tr' && c.s.N2 === 1000 && c.s.N1 === 500 && !c.s.loaded, explain: 'Cuộn thứ cấp có nhiều vòng hơn: U₂ lớn hơn U₁.'},
       {type: 'predict', title: 'U₂ của biến áp tăng áp', text: 'Tính U₂ (V) khi N₂ = 1000, N₁ = 500, U₁ = 20 V (tải hở).', unit: 'V', hints: ['U₂ = 20·1000/500.'], answer: () => transformer(M({...T0, N2: 1000, loaded: false})).U2, tol: 0.6, explain: 'U₂ ≈ 40 V.'},
       {type: 'do', title: 'Đóng tải và đo dòng điện', text: 'Trở lại N₂ = 100, đóng tải R = 20 Ω. Đọc I₁/I₂ trong khung bên trái.', hints: ['Nút “Tải: KHÔNG”, N₂ về 100.'], setup: () => act.set({...T0}), check: (c) => c.s.mode === 'tr' && c.s.loaded && c.s.N2 === 100 && c.s.N1 === 500, explain: 'Có dòng điện chạy qua tải; đèn sáng.'},
-      {type: 'predict', title: 'Tỉ số cường độ dòng điện', text: 'Với biến áp lí tưởng I₁/I₂ = N₂/N₁ (= 0,2 ở đây). Mô hình thực cho I₁/I₂ bằng bao nhiêu? (đọc trong khung bên trái)', unit: '', hints: ['Dòng sơ cấp lớn hơn một chút vì còn dòng từ hoá.'], answer: () => transformer(M(T0)).Iratio, tol: 0.03, explain: 'I₁/I₂ ≈ 0,21–0,22 gần bằng 0,2 (N₂/N₁): dòng ở cuộn có ít vòng dây hơn thì lớn hơn. Chênh lệch nhỏ do dòng từ hoá ở lõi sắt.'},
+      {type: 'predict', title: 'Tỉ số cường độ dòng điện', text: 'Với biến áp lí tưởng I₁/I₂ = N₂/N₁ (= 0,2 ở đây). Mô hình thực cho I₁/I₂ bằng bao nhiêu? (đọc trong khung bên trái)', unit: '', hints: ['Dòng sơ cấp lớn hơn một chút vì còn dòng từ hoá.'], answer: () => transformer(M(T0)).Iratio, tol: 0.015, explain: 'I₁/I₂ ≈ 0,21–0,22 gần bằng 0,2 (N₂/N₁): dòng ở cuộn có ít vòng dây hơn thì lớn hơn. Chênh lệch nhỏ do dòng từ hoá ở lõi sắt.'},
       {type: 'choice', title: 'Công suất hai phía', text: 'Biến áp thực có điện trở cuộn dây và tổn hao trong lõi sắt. So sánh công suất P₁ (lấy từ nguồn) và P₂ (cấp cho tải):', options: ['P₁ > P₂, phần chênh lệch là hao phí', 'P₁ = P₂ luôn luôn', 'P₁ < P₂'], answer: 0, wrong: ['', 'Chỉ đúng với biến áp lí tưởng (bấm “Biến áp: LÍ TƯỞNG” để thử).', 'Không thể tạo ra năng lượng: P₂ không thể lớn hơn P₁.'], hints: ['Xem P₁, P₂ trong khung bên trái.'], explain: 'P₁ = P₂ + P_hao phí (toả nhiệt trên cuộn dây và lõi sắt). Biến áp không tạo ra năng lượng.'},
-      {type: 'predict', title: 'Hiệu suất máy biến áp', text: 'Hiệu suất H = P₂/P₁ (%). Đọc trong bảng bên trái.', unit: '%', hints: ['Dòng “H = P₂/P₁”.'], answer: () => transformer(M(T0)).eff * 100, tol: 2.5, explain: 'H ≈ 94 % (R = 20 Ω): hao phí chủ yếu do điện trở cuộn dây (hiệu ứng Joule) và dòng từ hoá; tải càng nhẹ thì hiệu suất càng thấp. Máy biến áp lớn có hiệu suất trên 98 %.'},
+      {type: 'predict', title: 'Hiệu suất máy biến áp', text: 'Hiệu suất H = P₂/P₁ (%). Đọc trong bảng bên trái.', unit: '%', hints: ['Dòng “H = P₂/P₁”.'], answer: () => transformer(M(T0)).eff * 100, tol: 2.5, explain: 'H ≈ 94 % (R = 20 Ω): hao phí do điện trở cuộn dây (hiệu ứng Joule) và do tổn hao trong lõi sắt. Tải rất nhẹ thì tổn hao lõi chiếm tỉ lệ lớn nên H thấp; tải quá nặng thì Joule trên cuộn dây tăng nên H cũng giảm. Máy biến áp lớn có hiệu suất trên 98 %.'},
       {type: 'choice', title: 'Truyền tải điện năng đi xa', text: 'Để truyền công suất P đi xa qua dây có điện trở R mà hao phí nhiệt nhỏ, nên:', options: ['Tăng điện áp truyền tải (dùng biến áp tăng áp ở nhà máy)', 'Giảm điện áp truyền tải', 'Tăng cường độ dòng điện'], answer: 0, wrong: ['', 'Hao phí P_hp = I²R = (P/U)²R sẽ tăng.', 'Dòng lớn thì hao phí I²R lớn.'], hints: ['P_hp = (P/U)²·R.'], explain: 'P_hp = I²R = (P/U)²R: tăng U lên 10 lần thì hao phí giảm 100 lần. Tại nơi tiêu thụ dùng biến áp hạ áp.'},
       {type: 'do', title: 'Biến áp lí tưởng', text: 'Bấm “Biến áp: THỰC” để chuyển thành lí tưởng (bỏ qua điện trở cuộn dây và tổn hao lõi) và quan sát hiệu suất.', hints: ['Nút “Biến áp” ở bảng điều khiển.'], check: (c) => c.s.idealT && c.s.loaded, explain: 'Biến áp lí tưởng: U₂/U₁ = N₂/N₁ chính xác, P₁ = P₂, hiệu suất 100 %.'},
       {type: 'do', title: 'Bóc tách thiết bị', text: 'Bấm TEARDOWN (phím T): lõi thép, hai cuộn dây, từ thông (chấm xanh) chạy quanh lõi.', hints: ['Nút cam “TEARDOWN”.'], check: (c) => c.td > 0.85, explain: 'Chấm xanh cho thấy từ thông xoay chiều chạy quanh lõi thép, xuyên qua cả hai cuộn dây: đó là cầu nối năng lượng từ cuộn sơ cấp sang thứ cấp.'},
@@ -48,6 +48,7 @@ export function makeLesson(act) {
       'Máy biến áp: U₂/U₁ = N₂/N₁; với tải nặng I₁/I₂ ≈ N₂/N₁; N₂ > N₁ là tăng áp, N₂ < N₁ là hạ áp.',
       'Biến áp thực có hao phí (nhiệt ở cuộn dây và lõi): P₁ = P₂ + P_hp, hiệu suất H = P₂/P₁ < 100 %.',
       'Truyền tải điện xa: P_hp = (P/U)²R nên dùng điện áp cao.',
+      'Mô hình rút gọn: một cặp cực (f = n); bỏ qua tự cảm của khung và mômen cản; lõi biến áp tuyến tính, không từ thông rò; điện trở khung 0,01 Ω/vòng chọn để dễ tính.',
     ],
   };
 }

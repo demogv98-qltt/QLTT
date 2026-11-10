@@ -34,7 +34,7 @@ const tdS = {on: false, v: 0, from: 0, t0: -9};
 const tour = {enabled: true, run: true, t0: 0, ev: 0, last: -1};
 let lastInput = 0, viewName = 'hero', lessonH = 0, shift = 0, off = {az: 0, el: 0, k: 1};
 const cam = {az: 20, el: 18, d: 1.6, tx: 0.1, ty: TABLE + 0.12, tz: 0};
-const VIEWFN = {hero: () => [22, 20, 1.55, 0.12, TABLE + 0.12, 0], close: () => [28, 16, 0.9, 0.0, TABLE + 0.12, 0], top: () => [0, 78, 1.5, 0.05, TABLE, 0], side: () => [90, 8, 1.5, 0.0, TABLE + 0.12, 0]};
+const VIEWFN = {hero: () => [22, 20, 1.95, 0.0, TABLE + 0.12, 0], close: () => [28, 16, 0.9, 0.0, TABLE + 0.12, 0], top: () => [0, 78, 1.5, 0.05, TABLE, 0], side: () => [90, 8, 1.5, 0.0, TABLE + 0.12, 0]};
 const DURATION = 56;
 const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero'], [6, 'view', 'close'], [10, 'cmd', 'n', 4], [16, 'cmd', 'n', 2], [18, 'td', true], [18.1, 'view', 'side'], [24, 'td', false], [24.1, 'preset', 1], [24.2, 'view', 'hero'], [30, 'cmd', 'N2', 300], [36, 'preset', 2], [44, 'toggle', 'idealT'], [48, 'toggle', 'idealT'], [50, 'preset', 0]];
 function cmd(k, v) { let x = clamp(v, RANGE[k][0], RANGE[k][1]); if (k === 'N' || k === 'N1' || k === 'N2') x = Math.round(x / 10) * 10; model[k] = x; }
@@ -77,7 +77,7 @@ function labelItems(r, s, td) {
   } else {
     at('prim', rig.pts.prim, {text: `SƠ CẤP N₁ = ${s.N1} VÒNG`, sub: `U₁ = ${f2(r.t.U1, 1)} V`, color: BL, dy: -40, dx: -30, a: 1}); at('sec', rig.pts.sec, {text: `THỨ CẤP N₂ = ${s.N2} VÒNG`, sub: `U₂ = ${f2(r.t.U2, 2)} V`, color: RD, dy: -40, dx: 30, a: 1});
     at('lamp', rig.pts.lamp, {text: 'ĐÈN (TẢI)', sub: s.loaded ? `R = ${s.RLt} Ω · P₂ = ${f2(r.t.P2, 2)} W` : 'mạch hở', color: GR, dy: -30, dx: 40, a: 1}); at('src', rig.pts.src, {text: 'NGUỒN XOAY CHIỀU', sub: '50 Hz', color: INK, dy: -30, dx: 40, a: 1});
-    at('core', rig.pts.core, {text: 'LÕI THÉP', sub: 'thép lá mỏng ghép cách điện', color: INK, part: true, dy: -40, dx: 0, a: part}); at('flux', rig.pts.flux, {text: 'TỪ THÔNG (chấm xanh)', sub: 'xoay chiều, chạy quanh lõi', color: BL, part: true, dy: -70, dx: 100, a: part}); at('vm', rig.pts.vm, {text: 'VÔN KẾ U₂', sub: 'điện áp thứ cấp', color: INK, part: true, dy: 30, dx: 30, a: part});
+    at('core', rig.pts.core, {text: 'LÕI THÉP', sub: 'thực tế: lá mỏng cách điện (hình vẽ rút gọn)', color: INK, part: true, dy: -40, dx: 0, a: part}); at('flux', rig.pts.flux, {text: 'TỪ THÔNG (chấm xanh)', sub: 'xoay chiều; hoạt cảnh đã làm chậm (thực tế 50 Hz)', color: BL, part: true, dy: -70, dx: 100, a: part}); at('vm', rig.pts.vm, {text: 'VÔN KẾ U₂', sub: 'điện áp thứ cấp', color: INK, part: true, dy: 30, dx: 30, a: part});
   }
   return items;
 }
@@ -93,7 +93,7 @@ function frame(now) {
   const r = readout(model);
   const td = tdS.from + ((tdS.on ? 1 : 0) - tdS.from) * ease((T - tdS.t0) / 1.8); tdS.v = td;
   rig.update(r, model, td);
-  const v = VIEWFN[viewName](r, model), k = 1 - Math.exp(-dt / 0.3);
+  let v = VIEWFN[viewName](r, model); if (viewName === 'side' && model.mode === 'gen') v = [-62, 38, 1.4, 0, TABLE + 0.14, 0]; const k = 1 - Math.exp(-dt / 0.3);
   cam.az += (v[0] + off.az - cam.az) * k; cam.el += (v[1] + off.el - cam.el) * k; cam.d += (v[2] * off.k - cam.d) * k; cam.tx += (v[3] - cam.tx) * k; cam.ty += (v[4] - cam.ty) * k; cam.tz += (v[5] - cam.tz) * k;
   st.setCenter(cam.tx); st.frame({az: cam.az * D2R, el: clamp(cam.el, -5, 89.5) * D2R, d: cam.d, tx: cam.tx, ty: cam.ty, tz: cam.tz});
   lesson.tick(); shift += ((lessonH * 0.45) - shift) * 0.15; st.setShift(shift);

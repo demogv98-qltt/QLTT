@@ -36,6 +36,6 @@ export function readout(s) {
 export const PRESETS = [
   {id: 'g', vi: 'Máy phát: N = 200, B = 0,2 T, n = 2 vòng/s', note: 'E₀ = NBSω ≈ 4,0 V; f = 2 Hz', mode: 'gen', n: 2, N: 200, B: 0.2, RL: 20},
   {id: 'h', vi: 'Biến áp hạ áp 500 : 100', note: 'U₁ = 20 V → U₂ ≈ 4 V', mode: 'tr', N1: 500, N2: 100, U1: 20, RLt: 100, loaded: true},
-  {id: 'k', vi: 'Biến áp tăng áp 100 : 1000', note: 'U₂ ≈ 10·U₁ nhưng I₂ ≈ I₁/10', mode: 'tr', N1: 100, N2: 1000, U1: 12, RLt: 500, loaded: true},
+  {id: 'k', vi: 'Biến áp tăng áp 200 : 1000', note: 'U₂ ≈ 10·U₁ khi hở (≈ 8,8·U₁ khi có tải); I₂ ≈ I₁/10', mode: 'tr', N1: 200, N2: 1000, U1: 12, RLt: 500, loaded: true},
 ];
 export const record = (s) => { const r = readout(s); s.rows.push(s.mode === 'gen' ? {mode: 'gen', n: s.n, N: s.N, B: s.B, E0: r.g.E0, f: r.g.f} : {mode: 'tr', N1: s.N1, N2: s.N2, U1: s.U1, U2: r.t.U2, I1: r.t.I1, I2: r.t.I2}); return true; };

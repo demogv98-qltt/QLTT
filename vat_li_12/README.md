@@ -9,4 +9,4 @@ Mở file `.html` bằng Chrome/Edge (không cần mạng). Số/tên bài trong
 | B4 | `B4_thuc_hanh_do_cam_ung_tu_3D.html` – Thực hành đo B bằng cân dòng điện, hồi quy, sai số | xong, đã phản biện + sửa |
 | B5 | `B5_hat_dien_tich_trong_tu_truong_3D.html` – Lực Lorentz, quỹ đạo tròn/xoắn ốc, đo e/m | xong, đã phản biện + sửa (◻ xác nhận bài thuộc chương trình) |
 | B6 | `B6_cam_ung_dien_tu_3D.html` – Cảm ứng điện từ, Faraday, Lenz, bảo toàn năng lượng (có bàn tay phải) | xong, đã phản biện + sửa |
-| B7 | `B7_may_phat_dien_may_bien_ap_3D.html` – Máy phát điện xoay chiều và máy biến áp | xong, đang chờ phản biện |
+| B7 | `B7_may_phat_dien_may_bien_ap_3D.html` – Máy phát điện xoay chiều và máy biến áp | xong, đã phản biện + sửa |

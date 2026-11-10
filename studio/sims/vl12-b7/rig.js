@@ -21,30 +21,38 @@ export function createRig(scene) {
   // đèn (dùng chung hai chế độ): thân đế + bóng thuỷ tinh; độ sáng điều khiển bằng emissive
   function makeLamp(x) { const g = new THREE.Group(); g.position.set(x, TABLE, 0); root.add(g); add(g, new THREE.CylinderGeometry(0.05, 0.055, 0.02, 24), mat(COL.dark, {metalness: 0.4}), 0, 0.01, 0); add(g, new THREE.CylinderGeometry(0.016, 0.016, 0.05, 16), mat(COL.steel, {metalness: 0.8}), 0, 0.045, 0);
     const bulbM = new THREE.MeshStandardMaterial({color: 0xfff3c4, emissive: 0xffc24a, emissiveIntensity: 0, transparent: true, opacity: 0.85, roughness: 0.2}); const bulb = add(g, new THREE.SphereGeometry(0.045, 24, 18), bulbM, 0, 0.1, 0, false); const light = new THREE.PointLight(0xffc24a, 0, 1.2); light.position.set(0, 0.1, 0); g.add(light);
-    for (const sx of [-1, 1]) add(g, new THREE.CylinderGeometry(0.0035, 0.0035, 0.045, 8), mat(COL.cu), sx * 0.014, 0.075, 0, false); return {g, bulbM, light, bulb}; }
-  const lampG = makeLamp(0.45); pts.lamp = marker(lampG.g, 0.06, 0.12, 0);
+    for (const sx of [-1, 1]) { add(g, new THREE.CylinderGeometry(0.0035, 0.0035, 0.045, 8), mat(COL.cu), sx * 0.014, 0.075, 0, false); add(g, new THREE.CylinderGeometry(0.006, 0.006, 0.024, 12), mat(COL.cu, {metalness: 0.9}), sx * 0.04, 0.032, 0, false); } return {g, bulbM, light, bulb}; }
+  const LX = 0.36, lampG = makeLamp(LX), LPL = [LX - 0.04, TABLE + 0.046, 0], LPR = [LX + 0.04, TABLE + 0.046, 0]; pts.lamp = marker(lampG.g, 0.06, 0.12, 0);
   // ======================= MÁY PHÁT =======================
   const gen = new THREE.Group(); root.add(gen); const YP = TABLE + 0.02 + 0.07; // tâm cực từ
   const yoke = gmat(0x5d6a75, {metalness: 0.5}), nM = gmat(COL.N, {metalness: 0.4}), sM = gmat(COL.S, {metalness: 0.4});
   add(gen, new THREE.BoxGeometry(0.34, 0.02, 0.26), mat(COL.dark, {metalness: 0.4}), 0, TABLE + 0.01, 0.0); add(gen, new THREE.BoxGeometry(0.28, 0.02, 0.14), yoke, 0, TABLE + 0.03, 0);
   add(gen, new THREE.BoxGeometry(0.06, 0.14, 0.14), nM, -0.1, YP + 0.01, 0); add(gen, new THREE.BoxGeometry(0.06, 0.14, 0.14), sM, 0.1, YP + 0.01, 0);
-  const shaftTop = TABLE + 0.30; add(gen, new THREE.CylinderGeometry(0.005, 0.005, shaftTop - (TABLE + 0.04), 12), steel, 0, (shaftTop + TABLE + 0.04) / 2, 0); // trục (đứng yên về hình, quay = nhóm con)
+  const shaftTop = TABLE + 0.30;
   add(gen, new THREE.BoxGeometry(0.04, 0.02, 0.04), mat(COL.dark, {metalness: 0.4}), 0, TABLE + 0.04, 0); // ổ đỡ dưới trên đế
   add(gen, new THREE.CylinderGeometry(0.01, 0.01, TABLE + 0.27 - TABLE - 0.02, 12), steel, 0, (TABLE + 0.27 + TABLE + 0.02) / 2, -0.09); // cột đỡ phía sau
   add(gen, new THREE.CylinderGeometry(0.006, 0.006, 0.09, 10).rotateX(Math.PI / 2), steel, 0, TABLE + 0.27, -0.045); add(gen, new THREE.BoxGeometry(0.03, 0.016, 0.03), mat(COL.dark, {metalness: 0.4}), 0, TABLE + 0.27, 0); // ổ đỡ trên + tay đòn
   const rot = new THREE.Group(); rot.position.set(0, YP, 0); gen.add(rot);
-  // khung dây: mặt phẳng y–z (pháp tuyến +x khi θ = 0), cao 0,10 m, rộng 0,08 m
-  const hh = 0.05, ww = 0.04, coilPts = [[0, hh, ww], [0, hh, -ww], [0, -hh, -ww], [0, -hh, ww], [0, hh, ww]]; const coilM = cuM;
-  for (let k = 0; k < 4; k++) { const a = new THREE.Vector3(...coilPts[k]), b = new THREE.Vector3(...coilPts[k + 1]), len = a.distanceTo(b), m = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0028, len, 10), coilM); m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); m.castShadow = true; rot.add(m); }
-  for (const sy of [-1, 1]) add(rot, new THREE.CylinderGeometry(0.0028, 0.0028, 2 * ww, 8).rotateX(Math.PI / 2), mat(COL.steel, {metalness: 0.8}), 0, sy * hh, 0, false); // thanh ngang nối khung với trục (ở cạnh trên/dưới) — trục đi qua tâm
-  add(rot, new THREE.CylinderGeometry(0.006, 0.006, 2 * hh + 0.03, 12), steel, 0, 0, 0);
-  const dirs = []; const dm = flat(0x2c9a4b); for (const [i, p] of [[0, [0, 0, ww]], [1, [0, 0, -ww]], [2, [0, hh, 0]], [3, [0, -hh, 0]]]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.022, 10), dm); c.position.set(...p); c.userData.k = i; rot.add(c); dirs.push(c); }
-  // vành khuyên + chổi than + tay quay
-  const sr = new THREE.Group(); sr.position.y = TABLE + 0.205; gen.add(sr); for (const dy of [0, 0.025]) add(sr, new THREE.CylinderGeometry(0.014, 0.014, 0.012, 24), mat(COL.cu, {metalness: 0.9, roughness: 0.25}), 0, dy, 0, false);
-  for (const [dy, col] of [[0, leadR], [0.025, lead]]) { add(gen, new THREE.BoxGeometry(0.01, 0.01, 0.012), mat(0x333333), 0, TABLE + 0.205 + dy, 0.0 + 0.017, false); add(gen, new THREE.CylinderGeometry(0.0025, 0.0025, 0.09, 8).rotateX(Math.PI / 2), mat(COL.steel), 0, TABLE + 0.205 + dy, 0.0 + 0.062, false); gen.add(tube([[0, TABLE + 0.205 + dy, 0.105], [0.1, TABLE + 0.15 + dy * 2, 0.14], [0.3, TABLE + 0.08, 0.06 + dy], [0.42, TABLE + 0.1, 0.0 + (dy ? 0.014 : -0.014)]], 0.0032, col)); }
+  const hh = 0.05, ww = 0.04, YR1 = TABLE + 0.205 - YP, YR2 = TABLE + 0.23 - YP, coilCu = mat(COL.cu, {metalness: 0.85, roughness: 0.3}), insM = mat(0xeeeeea, {metalness: 0, roughness: 0.6});
+  const seg = (a0, b0, rad, m, parent) => { const A = new THREE.Vector3(...a0), Bv = new THREE.Vector3(...b0), len = A.distanceTo(Bv), o = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, len, 10), m); o.position.copy(A).add(Bv).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), Bv.clone().sub(A).normalize()); o.castShadow = true; parent.add(o); return o; };
+  // khung dây HỞ ở giữa cạnh trên: hai đầu dây đi lên dọc trục tới hai vành khuyên (quay cùng khung)
+  const zg = 0.006, coilPts = [[0, hh, zg], [0, hh, ww], [0, -hh, ww], [0, -hh, -ww], [0, hh, -ww], [0, hh, -0.019]];
+  for (let k = 0; k < coilPts.length - 1; k++) seg(coilPts[k], coilPts[k + 1], 0.0028, coilCu, rot);
+  seg([0, hh, zg], [0, YR1 - 0.006, zg], 0.0022, coilCu, rot); // đầu A lên mặt dưới vành 1
+  seg([0, hh, -0.019], [0, YR2, -0.019], 0.0022, coilCu, rot); seg([0, YR2, -0.019], [0, YR2, -0.012], 0.0022, coilCu, rot); // đầu B đi ngoài vành 1, chạm cạnh vành 2
+  for (const sy of [-1, 1]) add(rot, new THREE.CylinderGeometry(0.0028, 0.0028, 2 * ww, 8).rotateX(Math.PI / 2), mat(COL.steel, {metalness: 0.8}), 0, sy * hh, 0, false);
+  add(rot, new THREE.CylinderGeometry(0.006, 0.006, (YR1 - 0.012) + 0.055, 12), steel, 0, ((YR1 - 0.012) - 0.055) / 2, 0); // trục thép (thấp)
+  add(rot, new THREE.CylinderGeometry(0.0085, 0.0085, YR2 - YR1 + 0.03, 14), insM, 0, (YR1 + YR2) / 2, 0); // ống cách điện giữa hai vành
+  add(rot, new THREE.CylinderGeometry(0.006, 0.006, shaftTop - YP - (YR2 + 0.015), 12), steel, 0, (shaftTop - YP + YR2 + 0.015) / 2, 0); // trục thép (cao) tới tay quay
+  for (const [dy, col] of [[YR1, leadR], [YR2, lead]]) add(rot, new THREE.CylinderGeometry(0.014, 0.014, 0.012, 24), mat(COL.cu, {metalness: 0.9, roughness: 0.25}), 0, dy, 0, false);
+  const dirs = []; const dm = flat(0x2c9a4b); for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.0055, 0.016, 10), dm); c.userData.k = i; rot.add(c); dirs.push(c); }
+  // vị trí mũi tên NẰM TRÊN dây: cạnh trên (z>0.006 tới ww), cạnh đứng z = +ww, cạnh dưới, cạnh đứng z = −ww; chiều (khi e > 0): cạnh trên +z, đứng(+ww) −y, dưới −z, đứng(−ww) +y
+  const dpos = [[0, hh, 0.024], [0, 0.0, ww], [0, -hh, 0.0], [0, 0.0, -ww]], dtan = [[0, 0, 1], [0, -1, 0], [0, 0, -1], [0, 1, 0]]; dirs.forEach((c, i) => { c.position.set(...dpos[i]); c.userData.tg = new THREE.Vector3(...dtan[i]); });
+  // chổi than (đứng yên) ép vào vành, cột đỡ chổi ở phía trước
+  for (const [dy, col] of [[YR1, leadR], [YR2, lead]]) { const y = YP + dy; add(gen, new THREE.BoxGeometry(0.01, 0.01, 0.012), mat(0x333333), 0, y, 0.017, false); add(gen, new THREE.CylinderGeometry(0.0025, 0.0025, 0.09, 8).rotateX(Math.PI / 2), mat(COL.steel), 0, y, 0.062, false); gen.add(tube([[0, y, 0.105], [0.1, TABLE + 0.15 + (dy - YR1) * 2, 0.14], [0.25, TABLE + 0.09, 0.08], [LPL[0] + (dy === YR1 ? 0 : 0.08), LPL[1], LPL[2]]], 0.0032, col)); }
   add(gen, new THREE.CylinderGeometry(0.01, 0.01, 0.23 - 0.02, 12), mat(COL.steel), 0, (TABLE + 0.02 + TABLE + 0.23) / 2, 0.105);
   const crank = new THREE.Group(); crank.position.y = shaftTop; gen.add(crank); add(crank, new THREE.CylinderGeometry(0.03, 0.03, 0.01, 24), mat(COL.dark, {metalness: 0.4}), 0, 0.005, 0); add(crank, new THREE.CylinderGeometry(0.003, 0.003, 0.05, 8).rotateZ(Math.PI / 2), steel, 0.025, 0.01, 0); add(crank, new THREE.CylinderGeometry(0.007, 0.007, 0.04, 12), mat(COL.orange, {metalness: 0.3}), 0.05, 0.03, 0);
-  pts.coil = marker(rot, 0, hh + 0.01, ww); pts.N = marker(gen, -0.1, YP + 0.09, 0); pts.S = marker(gen, 0.1, YP + 0.09, 0); pts.crank = marker(crank, 0.05, 0.06, 0); pts.rings = marker(gen, 0.02, TABLE + 0.225, 0); pts.brush = marker(gen, 0, TABLE + 0.205, 0.017); pts.shaft = marker(gen, 0, TABLE + 0.12, 0.0); pts.post = marker(gen, 0, TABLE + 0.15, -0.09);
+  pts.coil = marker(rot, 0, hh + 0.01, ww); pts.N = marker(gen, -0.1, YP + 0.09, 0); pts.S = marker(gen, 0.1, YP + 0.09, 0); pts.crank = marker(crank, 0.05, 0.06, 0); pts.rings = marker(gen, 0.02, TABLE + 0.22, 0); pts.brush = marker(gen, 0, TABLE + 0.205, 0.017); pts.shaft = marker(gen, 0, TABLE + 0.12, 0.0); pts.post = marker(gen, 0, TABLE + 0.15, -0.09);
   // ======================= BIẾN ÁP =======================
   const tr = new THREE.Group(); root.add(tr); const Y0 = TABLE + 0.02, CH = 0.24, CW = 0.30, LG = 0.05, ironM = gmat(COL.iron, {metalness: 0.7, roughness: 0.4});
   add(tr, new THREE.BoxGeometry(0.36, 0.02, 0.14), mat(COL.dark, {metalness: 0.4}), 0, TABLE + 0.01, 0);
@@ -54,21 +62,22 @@ export function createRig(scene) {
   const lx = -CW / 2 + LG / 2, rx = CW / 2 - LG / 2, wy = Y0 + CH / 2, wh = CH - 2 * LG - 0.01;
   const flux = []; const fm = new THREE.MeshBasicMaterial({color: 0x2b59c3, transparent: true, opacity: 0.85}); for (let i = 0; i < 28; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), fm.clone()); tr.add(m); flux.push(m); }
   const loopPath = (u) => { const L1 = CH - LG, L2 = CW - LG, per = 2 * (L1 + L2); let d = ((u % 1) + 1) % 1 * per; const x0 = -L2 / 2, x1 = L2 / 2, y0 = Y0 + LG / 2, y1 = Y0 + CH - LG / 2; if (d < L1) return [x0, y0 + d]; d -= L1; if (d < L2) return [x0 + d, y1]; d -= L2; if (d < L1) return [x1, y1 - d]; d -= L1; return [x1 - d, y0]; };
-  const srcBox = new THREE.Group(); srcBox.position.set(-0.45, TABLE, 0); tr.add(srcBox); add(srcBox, new THREE.BoxGeometry(0.16, 0.1, 0.12), mat(0x3e5666, {metalness: 0.3}), 0, 0.05, 0); const d1 = panel(256, 96); const p1 = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.04), new THREE.MeshBasicMaterial({map: d1.t})); p1.position.set(0, 0.06, 0.0605); srcBox.add(p1);
-  const vm2 = new THREE.Group(); vm2.position.set(0.3, TABLE, 0.12); tr.add(vm2); add(vm2, new THREE.BoxGeometry(0.12, 0.08, 0.08), mat(0x3e5666, {metalness: 0.3}), 0, 0.04, 0); const d2 = panel(256, 96); const p2 = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.034), new THREE.MeshBasicMaterial({map: d2.t})); p2.position.set(0, 0.05, 0.0405); vm2.add(p2);
+  const srcBox = new THREE.Group(); srcBox.position.set(-0.36, TABLE, 0); tr.add(srcBox); add(srcBox, new THREE.BoxGeometry(0.16, 0.1, 0.12), mat(0x3e5666, {metalness: 0.3}), 0, 0.05, 0); const d1 = panel(256, 96); const p1 = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.04), new THREE.MeshBasicMaterial({map: d1.t})); p1.position.set(0, 0.06, 0.0605); srcBox.add(p1);
+  const vm2 = new THREE.Group(); vm2.position.set(0.3, TABLE, 0.13); tr.add(vm2); add(vm2, new THREE.BoxGeometry(0.12, 0.08, 0.08), mat(0x3e5666, {metalness: 0.3}), 0, 0.04, 0); const d2 = panel(256, 96); const p2 = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.034), new THREE.MeshBasicMaterial({map: d2.t})); p2.position.set(0, 0.05, 0.0405); vm2.add(p2);
   let trKey = ''; const trLeads = new THREE.Group(); tr.add(trLeads);
   function buildTr(N1, N2) {
     const t1 = 0.012 + 0.028 * (N1 / 1000), t2 = 0.012 + 0.028 * (N2 / 2000); prim.scale.set(LG + 2 * t1, wh, 0.05 + 2 * t1); prim.position.set(lx, wy, 0); sec.scale.set(LG + 2 * t2, wh, 0.05 + 2 * t2); sec.position.set(rx, wy, 0);
-    trLeads.clear(); const top1 = wy + wh / 2; trLeads.add(tube([[lx - 0.01, top1, 0.0], [-0.25, TABLE + 0.2, 0.02], [-0.4, TABLE + 0.12, 0.02], [-0.44, TABLE + 0.1, 0.02]], 0.0032, leadR)); trLeads.add(tube([[lx + 0.01, wy - wh / 2, 0.0], [-0.2, TABLE + 0.06, 0.05], [-0.4, TABLE + 0.04, 0.05], [-0.46, TABLE + 0.1, -0.02]], 0.0032, lead));
-    trLeads.add(tube([[rx + 0.01, wy + wh / 2, 0.0], [0.25, TABLE + 0.22, 0.0], [0.42, TABLE + 0.14, 0.0], [0.436, TABLE + 0.075, 0.0]], 0.0032, leadR)); trLeads.add(tube([[rx - 0.01, wy - wh / 2, 0.0], [0.2, TABLE + 0.05, -0.04], [0.4, TABLE + 0.04, -0.04], [0.464, TABLE + 0.075, 0.0]], 0.0032, lead));
+    trLeads.clear(); const top1 = wy + wh / 2; trLeads.add(tube([[lx - 0.01, top1, 0.0], [-0.25, TABLE + 0.2, 0.02], [-0.33, TABLE + 0.12, 0.02], [-0.355, TABLE + 0.1, 0.02]], 0.0032, leadR)); trLeads.add(tube([[lx + 0.01, wy - wh / 2, 0.0], [-0.2, TABLE + 0.06, 0.05], [-0.33, TABLE + 0.04, 0.05], [-0.375, TABLE + 0.1, -0.02]], 0.0032, lead));
+    trLeads.add(tube([[rx + 0.01, wy + wh / 2, 0.0], [0.24, TABLE + 0.2, 0.0], [LX - 0.07, TABLE + 0.1, 0.0], LPL], 0.0032, leadR)); trLeads.add(tube([[rx - 0.01, wy - wh / 2, 0.0], [0.2, TABLE + 0.05, -0.04], [LX + 0.07, TABLE + 0.04, -0.03], LPR], 0.0032, lead));
+    trLeads.add(tube([[0.27, TABLE + 0.07, 0.12], [0.3, TABLE + 0.1, 0.07], LPL], 0.0025, leadR)); trLeads.add(tube([[0.33, TABLE + 0.07, 0.12], [0.38, TABLE + 0.06, 0.07], LPR], 0.0025, lead));
   }
   pts.core = marker(tr, 0, Y0 + CH + 0.01, 0); pts.prim = marker(tr, lx - 0.04, wy + 0.05, 0.03); pts.sec = marker(tr, rx + 0.04, wy + 0.05, 0.03); pts.src = marker(srcBox, 0.08, 0.1, 0); pts.vm = marker(vm2, 0.06, 0.08, 0); pts.flux = marker(tr, 0, Y0 + CH - LG / 2 + 0.02, 0.03); pts.lamp2 = marker(lampG.g, 0.0, 0.17, 0);
   function update(r, s, td) {
     const e = td * td * (3 - 2 * td); for (const m of ghostMats) { m.opacity = m.userData.base * (1 - 0.85 * e); m.depthWrite = e < 0.04 && m.userData.base >= 1; }
     gen.visible = s.mode === 'gen'; tr.visible = s.mode === 'tr';
     let P = 0, rated = 0.4;
-    if (s.mode === 'gen') { rot.rotation.y = r.g.th; crank.rotation.y = r.g.th; const sg = Math.sign(r.g.e) || 1; dirs.forEach((c) => { const k = c.userData.k; c.visible = Math.abs(r.g.i) > 1e-3; const tg = [new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 1, 0)][k].clone().multiplyScalar(sg); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tg); }); P = r.g.P; rated = 0.5; }
-    else { buildTrMaybe(s); const t = r.t; P = t.P2; rated = 1.5; const phase = Math.sin(r.ph), amp = Math.min(1, t.Vm / 25); flux.forEach((m, i) => { const [x, y] = loopPath(i / flux.length + 0.03 * phase * 6 * amp); m.position.set(x, y, 0.03 + 0.0); m.material.opacity = 0.35 + 0.6 * amp; m.scale.setScalar(0.6 + 0.8 * amp); }); disp(d1, t.U1.toFixed(1), 'V'); disp(d2, t.U2.toFixed(1), 'V', '#ffd27d'); }
+    if (s.mode === 'gen') { rot.rotation.y = r.g.th; crank.rotation.y = r.g.th; const sg = Math.sign(r.g.e) || 1; dirs.forEach((c) => { c.visible = Math.abs(r.g.i) > 1e-3; c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), c.userData.tg.clone().multiplyScalar(sg)); }); P = r.g.P; rated = 0.5; }
+    else { buildTrMaybe(s); const t = r.t; P = t.P2; rated = 1.5; const phase = Math.sin(r.ph), amp = Math.min(1, (t.Vm / s.N1) / (25 / 500)); flux.forEach((m, i) => { const [x, y] = loopPath(i / flux.length + 0.03 * phase * 6 * amp); m.position.set(x, y, 0.03 + 0.0); m.material.opacity = 0.35 + 0.6 * amp; m.scale.setScalar(0.6 + 0.8 * amp); }); disp(d1, t.U1.toFixed(1), 'V'); disp(d2, t.U2.toFixed(1), 'V', '#ffd27d'); }
     const b = Math.min(1, Math.sqrt(Math.max(P, 0) / rated)); lampG.bulbM.emissiveIntensity = 2.2 * b; lampG.light.intensity = 0.8 * b;
     root.updateMatrixWorld(true);
   }
