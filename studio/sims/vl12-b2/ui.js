@@ -14,7 +14,7 @@ export function createUI(app, hooks) {
   root.appendChild(el('<div class="chip"><b id="mode">NORMAL · NGUYÊN KHỐI</b><b id="tourchip">AUTO-TOUR</b></div>'));
   const row = (k, id, c) => `<div class="g3"><span class="k" style="white-space:nowrap;font-size:11px">${k}</span><span class="v" id="v${id}"></span><div class="bg"><i id="b${id}" style="background:${c}"></i></div></div>`;
   root.appendChild(el(`<div class="panel" id="left"><div class="ptitle"><span>KIM THỬ (CAM)</span><span>PROBE</span></div>
-    <div class="blk" style="--c:${OR}">${row('B đo', 'm', RD)}${row('B lí thuyết', 't', BL)}${row('Đo/lí thuyết', 'q', PU)}${row('I', 'I', GR)}${row('r', 'r', OR)}</div>
+    <div class="blk" style="--c:${OR}">${row('B đo', 'm', RD)}${row('B lí thuyết', 't', BL)}${row('Tỉ số', 'q', PU)}${row('I', 'I', GR)}${row('r', 'r', OR)}</div>
     <div class="res" id="tag" style="margin:0 0 6px;padding:5px 10px"></div>
     <canvas class="gr" id="g1" width="680" height="420"></canvas>
     <table class="tb" id="tb"></table></div>`));
@@ -22,9 +22,9 @@ export function createUI(app, hooks) {
   root.appendChild(el(`<div class="panel" id="right"><div class="ptitle"><span>BẢNG ĐIỀU KHIỂN</span><span>CONTROLS</span></div>
     <div class="md" id="sc"><button data-s="wire">Dây thẳng<br>dài</button><button data-s="loop">Khung dây<br>tròn</button><button data-s="sol">Ống<br>dây</button></div>
     <div class="md" id="md"><button data-m="compass">Kim<br>la bàn</button><button data-m="filings">Mạt<br>sắt</button><button data-m="lines">Đường<br>sức</button></div>
-    <div class="tg"><button id="t-earth">Trái Đất: KHÔNG</button></div>
+    <div class="tg"><button id="t-earth">Trái Đất: KHÔNG</button><button id="t-hand">Bàn tay phải: HIỆN</button></div>
     ${sl('I', 'I dòng điện (A)', RANGE.I[0], RANGE.I[1], 0.1, GR)}${sl('N', 'N số vòng dây', 1, 200, 1, BL)}${sl('R', 'R bán kính khung (m)', RANGE.R[0], RANGE.R[1], 0.01, TL)}
-    ${sl('r', 'r khoảng cách kim thử (m)', 0, 0.6, 0.01, OR)}${sl('alpha', 'α hướng của kim thử (°)', 0, 360, 1, PU)}
+    ${sl('r', 'r khoảng cách kim thử (m)', 0, 0.5, 0.01, OR)}${sl('alpha', 'α hướng của kim thử (°)', 0, 360, 1, PU)}
     <div class="rw"><button class="btn big" id="b-rec" style="margin:0;height:36px;font-size:14px;flex:2;box-shadow:none">＋ Ghi B tại kim</button><button class="pre" id="b-clear" style="margin:0;flex:1;text-align:center;font:700 12px Inter,sans-serif">Xoá bảng</button><select id="spd" style="flex:1;border:1px solid #b6c6d0;border-radius:4px;font:700 13px Inter"><option value="0.5">×0,5</option><option value="1" selected>×1</option></select></div>
     <div class="ptitle" style="margin-top:2px"><span>THÍ NGHIỆM MẪU</span><span>PRESETS</span></div>
     ${PRESETS.map((p, i) => `<button class="pre" data-i="${i}" style="padding:5px 10px;margin-bottom:5px"><b style="font-size:13px">${p.vi}</b><span>${p.note}</span></button>`).join('')}
@@ -38,7 +38,7 @@ export function createUI(app, hooks) {
   for (const k of ['I', 'N', 'R', 'r', 'alpha']) $('s-' + k).addEventListener('input', (e) => hooks.cmd(k, Number(e.target.value)));
   root.querySelectorAll('#md button').forEach((b) => b.addEventListener('click', () => hooks.mode(b.dataset.m)));
   root.querySelectorAll('#sc button').forEach((b) => b.addEventListener('click', () => hooks.source(b.dataset.s)));
-  $('t-earth').addEventListener('click', () => hooks.toggle('earth'));
+  $('t-earth').addEventListener('click', () => hooks.toggle('earth')); $('t-hand').addEventListener('click', () => hooks.toggle('hand'));
   $('b-rec').addEventListener('click', () => hooks.record()); $('b-clear').addEventListener('click', () => hooks.clear());
   root.querySelectorAll('.pre[data-i]').forEach((b) => b.addEventListener('click', () => hooks.preset(Number(b.dataset.i))));
   $('spd').addEventListener('change', (e) => hooks.speed(Number(e.target.value)));
@@ -53,28 +53,28 @@ export function createUI(app, hooks) {
     syncSliders(s) {
       $('sw-N').style.display = s.src === 'wire' ? 'none' : ''; $('sw-R').style.display = s.src === 'loop' ? '' : 'none';
       const nr = $('s-N'); const lo = s.src === 'loop' ? 1 : 10, hi = s.src === 'loop' ? 6 : 200; if (nr.min != lo || nr.max != hi) { nr.min = lo; nr.max = hi; $('sr-N').textContent = `${lo}…${hi}`; }
-      const rr = $('s-r'); const rlo = s.src === 'wire' ? 0.04 : 0; if (rr.min != rlo) { rr.min = rlo; $('sr-r').textContent = `${rlo}…0.6`; }
+      const rr = $('s-r'); const rlo = s.src === 'wire' ? 0.05 : 0; if (rr.min != rlo) { rr.min = rlo; $('sr-r').textContent = `${rlo}…0.5`; }
       for (const k of ['I', 'N', 'R', 'r', 'alpha']) { const i = $('s-' + k); if (document.activeElement !== i) i.value = s[k]; $('sv-' + k).textContent = k === 'I' ? `${f(s[k], 1)} A` : k === 'N' ? `${s[k]} vòng` : k === 'alpha' ? `${f(s[k], 0)}°` : `${f(s[k], 2)} m`; }
     },
     update(r, s, curve) {
       root.querySelectorAll('#md button').forEach((b) => b.classList.toggle('on', b.dataset.m === s.mode)); root.querySelectorAll('#sc button').forEach((b) => b.classList.toggle('on', b.dataset.s === s.src));
-      $('t-earth').classList.toggle('on', s.earth); $('t-earth').textContent = s.earth ? 'Trái Đất: CÓ (40 µT)' : 'Trái Đất: KHÔNG (bỏ qua)';
+      $('t-hand').classList.toggle('on', s.hand); $('t-hand').textContent = s.hand ? 'Bàn tay phải: HIỆN' : 'Bàn tay phải: ẨN'; $('t-earth').classList.toggle('on', s.earth); $('t-earth').textContent = s.earth ? 'Trái Đất: CÓ (40 µT)' : 'Trái Đất: KHÔNG (bỏ qua)';
       const set = (id, txt, bar, col) => { $('v' + id).innerHTML = txt; const b = $('b' + id); b.style.width = Math.min(100, Math.abs(bar) * 100) + '%'; if (col) b.style.background = col; };
       const lg = (v) => Math.max(0, Math.min(1, (Math.log10(Math.max(Math.abs(v), 1e-8)) + 7) / 4.5));
-      set('m', fB(r.bm), lg(r.bm)); set('t', fB(Math.abs(r.th)), lg(r.th)); set('q', `${f(r.ratio, 3)}`, Math.min(1, r.ratio / 1.2)); set('I', `${f(r.I, 1)}<small>A</small>`, Math.abs(r.I) / 10); set('r', `${f(r.r * 100, 0)}<small>cm</small>`, r.r / 0.6);
+      set('m', fB(r.bm), lg(r.bm)); set('t', fB(Math.abs(r.th)), lg(r.th)); set('q', r.atCenter && Math.abs(r.th) > 1e-12 ? `${f(r.ratio, 3)}` : '—', r.atCenter ? Math.min(1, r.ratio / 1.2) : 0); set('I', `${f(r.I, 1)}<small>A</small>`, Math.abs(r.I) / 10); set('r', `${f(r.r * 100, 0)}<small>cm</small>`, r.r / 0.6);
       const nm = { wire: 'dây thẳng dài: B = μ₀I/(2πr)', loop: 'tại tâm khung: B = μ₀NI/(2R)', sol: 'trong ống dây dài: B = μ₀NI/ℓ' }[s.src];
-      $('tag').innerHTML = `Công thức lí tưởng (${nm}) cho <b>${(Math.abs(r.th) * (Math.abs(r.th) >= 1e-3 ? 1e3 : 1e6)).toFixed(Math.abs(r.th) >= 1e-3 ? 3 : 1).replace('.', ',')} ${Math.abs(r.th) >= 1e-3 ? 'mT' : 'µT'}</b>; mô hình (tích phân Biot–Savart, dây hữu hạn) cho <b>${(r.bm * (r.bm >= 1e-3 ? 1e3 : 1e6)).toFixed(r.bm >= 1e-3 ? 3 : 1).replace('.', ',')} ${r.bm >= 1e-3 ? 'mT' : 'µT'}</b>`;
+      $('tag').innerHTML = (!r.atCenter ? `Công thức lí tưởng chỉ áp dụng tại tâm khung / giữa ống. Tại kim: mô hình cho <b>${(r.bm * (r.bm >= 1e-3 ? 1e3 : 1e6)).toFixed(r.bm >= 1e-3 ? 3 : 1).replace('.', ',')} ${r.bm >= 1e-3 ? 'mT' : 'µT'}</b>.` : `Công thức lí tưởng (${nm}) cho <b>${(Math.abs(r.th) * (Math.abs(r.th) >= 1e-3 ? 1e3 : 1e6)).toFixed(Math.abs(r.th) >= 1e-3 ? 3 : 1).replace('.', ',')} ${Math.abs(r.th) >= 1e-3 ? 'mT' : 'µT'}</b>; mô hình (tích phân Biot–Savart, dây hữu hạn) cho <b>${(r.bm * (r.bm >= 1e-3 ? 1e3 : 1e6)).toFixed(r.bm >= 1e-3 ? 3 : 1).replace('.', ',')} ${r.bm >= 1e-3 ? 'mT' : 'µT'}</b>`) + (s.src === 'wire' && r.r > 0.2 ? ' · ở xa dây (r > 20 cm) B giảm nhanh hơn 1/r vì dây chỉ dài 0,9 m' : '');
       $('tb').innerHTML = `<tr><th>nguồn</th><th>I (A)</th><th>N</th><th>r (cm)</th><th>B</th></tr>` + (r.rows.length ? r.rows.map((q) => `<tr><td>${{wire: 'dây', loop: 'khung', sol: 'ống'}[q.src]}</td><td>${f(q.I, 1)}</td><td>${q.src === 'wire' ? '—' : q.N}</td><td>${f(q.r * 100, 0)}</td><td>${fB(q.B)}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#6a8190">Chưa có số liệu · bấm “＋ Ghi B tại kim”</td></tr>');
       const c = $('g1'), g = c.getContext('2d'), w = c.width, h = c.height; g.clearRect(0, 0, w, h); g.font = '16px monospace'; g.lineWidth = 1.2; g.strokeStyle = '#e2eaef'; g.fillStyle = INK;
       const m = {l: 86, r: 14, t: 30, b: 38};
       if (s.src === 'wire') {
-        const R0 = 0.04, R1 = 0.6, lo = Math.log10(curve.lo), hi = Math.log10(curve.hi), X = (rr) => m.l + (Math.log10(rr / R0) / Math.log10(R1 / R0)) * (w - m.l - m.r), Y = (b) => h - m.b - ((Math.log10(Math.max(b, 1e-12)) - lo) / (hi - lo)) * (h - m.t - m.b);
-        g.textAlign = 'center'; for (const rr of [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]) { g.beginPath(); g.moveTo(X(rr), Y(10 ** lo)); g.lineTo(X(rr), Y(10 ** hi)); g.stroke(); g.fillText(String(Math.round(rr * 100)), X(rr), h - 14); }
-        g.textAlign = 'right'; for (let e = Math.ceil(lo); e <= hi; e++) { g.beginPath(); g.moveTo(X(R0), Y(10 ** e)); g.lineTo(X(R1), Y(10 ** e)); g.stroke(); g.fillText(`${(Math.round(10 ** (e + 6) * 1e3) / 1e3).toString().replace('.', ',')}µ`, m.l - 6, Y(10 ** e) + 5); }
+        const R0 = 0.05, R1 = 0.5, lo = Math.log10(curve.lo), hi = Math.log10(curve.hi), X = (rr) => m.l + (Math.log10(rr / R0) / Math.log10(R1 / R0)) * (w - m.l - m.r), Y = (b) => h - m.b - ((Math.log10(Math.max(b, 1e-12)) - lo) / (hi - lo)) * (h - m.t - m.b);
+        g.textAlign = 'center'; for (const rr of [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]) { g.beginPath(); g.moveTo(X(rr), Y(10 ** lo)); g.lineTo(X(rr), Y(10 ** hi)); g.stroke(); g.fillText(String(Math.round(rr * 100)), X(rr), h - 14); }
+        g.textAlign = 'right'; for (let e = Math.ceil(lo); e <= hi; e++) { g.beginPath(); g.moveTo(X(R0), Y(10 ** e)); g.lineTo(X(R1), Y(10 ** e)); g.stroke(); g.fillText(`${(Math.round(10 ** (e + 6) * 1e3) / 1e3).toString().replace('.', ',')} µT`, m.l - 6, Y(10 ** e) + 5); }
         g.strokeStyle = BL; g.lineWidth = 2; g.setLineDash([6, 5]); g.beginPath(); curve.ideal.forEach((p, i) => (i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])))); g.stroke(); g.setLineDash([]);
         g.strokeStyle = RD; g.lineWidth = 3; g.beginPath(); curve.model.forEach((p, i) => (i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])))); g.stroke();
         g.fillStyle = OR; r.rows.filter((q) => q.src === 'wire' && q.B > 0).forEach((q) => { g.beginPath(); g.arc(X(q.r), Y(q.B), 6, 0, 7); g.fill(); }); if (r.r >= R0) { g.fillStyle = INK; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(X(r.r), Y(r.bm), 9, 0, 7); g.fill(); g.stroke(); }
-        g.fillStyle = INK; g.font = '700 16px monospace'; g.textAlign = 'left'; g.fillText('B (µT) theo r (cm) · log–log · đỏ: mô hình, xanh nét đứt: 1/r', 6, 20);
+        g.fillStyle = INK; g.font = '700 16px monospace'; g.textAlign = 'left'; g.fillText('B theo r (cm), log–log · đỏ: mô hình, xanh: 1/r', 6, 20);
       } else {
         const U0 = -0.4, U1 = 0.4, hi = curve.hi, X = (u) => m.l + ((u - U0) / (U1 - U0)) * (w - m.l - m.r), Y = (b) => h - m.b - (b / hi) * (h - m.t - m.b);
         g.textAlign = 'center'; for (let u = -0.4; u <= 0.401; u += 0.1) { g.beginPath(); g.moveTo(X(u), Y(0)); g.lineTo(X(u), Y(hi)); g.stroke(); g.fillText(String(Math.round(u * 100)), X(u), h - 14); }
@@ -82,7 +82,7 @@ export function createUI(app, hooks) {
         g.strokeStyle = BL; g.lineWidth = 2; g.setLineDash([6, 5]); g.beginPath(); g.moveTo(X(U0), Y(curve.ideal)); g.lineTo(X(U1), Y(curve.ideal)); g.stroke(); g.setLineDash([]);
         g.strokeStyle = RD; g.lineWidth = 3; g.beginPath(); curve.model.forEach((p, i) => (i ? g.lineTo(X(p[0]), Y(Math.abs(p[1]))) : g.moveTo(X(p[0]), Y(Math.abs(p[1]))))); g.stroke();
         if (Math.abs(r.alpha % 180) < 0.5 || Math.abs((r.alpha % 180) - 180) < 0.5) { const u = (Math.abs(r.alpha - 180) < 1 ? -1 : 1) * r.r; g.fillStyle = INK; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.arc(X(u), Y(Math.abs(r.bm)), 9, 0, 7); g.fill(); g.stroke(); }
-        g.fillStyle = INK; g.font = '700 16px monospace'; g.textAlign = 'left'; g.fillText(`B (${curve.unitName}) theo vị trí trên trục x (cm); đỏ: mô hình, xanh: công thức lí tưởng`, 6, 20);
+        g.fillStyle = INK; g.font = '700 16px monospace'; g.textAlign = 'left'; g.fillText(`B (${curve.unitName}) theo x trên trục (cm); đỏ: mô hình, xanh: lí tưởng`, 6, 20);
       }
     },
     labels(items) {

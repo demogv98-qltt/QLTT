@@ -78,7 +78,7 @@ function labelItems(r, s, td) {
   at('north', rig.pts.north, {text: 'HƯỚNG BẮC', sub: 'từ trường Trái Đất ≈ 40 µT (nằm ngang)', color: GR, dy: -20, dx: 0, a: 1});
   at('sheet', rig.pts.sheet, {text: 'TẤM BÌA TRONG SUỐT', sub: 'đặt trên 4 trụ, ngay trên nam châm', color: INK, part: true, dy: 30, dx: 20, a: part});
   at('leg', rig.pts.leg, {text: 'TRỤ ĐỠ', sub: 'giữ tấm bìa và kim', color: INK, part: true, dy: 40, dx: 40, a: part});
-  at('rings', rig.pts.rings, {text: 'VÒNG DÂY TƯƠNG ĐƯƠNG', sub: 'mô hình: K = Br/μ₀', color: '#a86f00', part: true, dy: 70, dx: 70, a: part});
+  at('rings', rig.pts.rings, {text: 'VÒNG DÂY TƯƠNG ĐƯƠNG', sub: 'mô hình nam châm thanh', color: '#a86f00', part: true, dy: 70, dx: 70, a: part});
   return items;
 }
 function frame(now) {

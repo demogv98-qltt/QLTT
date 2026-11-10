@@ -47,7 +47,7 @@ const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero']
 function cmd(k, v) { if (k === 'I') model.cmd.I = clamp(v, RANGE.I[0], RANGE.I[1]); else model[k] = clamp(v, RANGE[k][0], RANGE[k][1]); }
 const ui = createUI(app, {
   cmd(k, v) { userInput(); cmd(k, v); ui.setPreset(-1); },
-  record() { userInput(); record(model); },
+  record() { userInput(); if (!record(model)) model.note = {at: performance.now() / 1000, text: 'Thanh đang dao động: chờ nó đứng yên (≈ 1 s) rồi ghi.'}; },
   clear() { userInput(); model.rows = []; },
   preset(i) { userInput(); applyPreset(i); },
   speed(v) { model.speed = v; },
@@ -82,15 +82,15 @@ const f1 = (x, d = 1) => x.toFixed(d).replace('.', ',').replace('-', '−');
 const proj = (p) => st.project(rig.worldPt(p));
 function labelItems(r, s, td) {
   const items = [], part = clamp((td - 0.8) / 0.2, 0, 1), at = (id, p, o) => { const q = proj(p); items.push({id, x: q.x, y: q.y, visible: q.visible, ...o}); };
-  at('rod', rig.pts.rod, {text: `THANH ĐỒNG · l = ${f1(r.l, 2)} m trong từ trường`, sub: `I = ${f1(r.I, 1)} A`, color: GR, dy: -120, dx: 120, a: 1});
+  at('rod', rig.pts.rod, {text: `THANH ĐỒNG · đoạn trong từ trường l = ${f1(r.l, 2)} m`, sub: `I = ${f1(r.I, 1)} A`, color: GR, dy: -120, dx: 120, a: 1});
   at('N', rig.pts.N, {text: 'CỰC N', sub: 'đường sức đi ra', color: '#c0392b', dy: -60, dx: -90, a: 1});
   at('S', rig.pts.S, {text: 'CỰC S', sub: 'đường sức đi vào', color: BL, dy: -60, dx: 90, a: 1});
   if (r.dir) at('F', rig.pts.arrowF, {text: `F = ${f1(r.F, 3)} N · ${r.dir > 0 ? 'lên' : 'xuống'}`, sub: 'lực từ F = BIl·sinθ', color: OR, dy: 70, dx: 170, a: 1});
   at('ruler', rig.pts.ruler, {text: `Δy = ${f1(r.up * 100, 1)} cm`, sub: 'mũi chỉ cam trên thước', color: OR, dy: -20, dx: 120, a: 1});
-  at('top', rig.pts.top, {text: 'THANH NGANG DẪN ĐIỆN', sub: 'treo hai lò xo, k = 4 N/m mỗi lò xo', color: INK, part: true, dy: -34, dx: 80, a: part});
+  at('top', rig.pts.top, {text: 'THANH NGANG CÁCH ĐIỆN', sub: 'gỗ, chỉ để treo hai lò xo (k = 4 N/m)', color: INK, part: true, dy: -34, dx: 80, a: part});
   at('spring', rig.pts.spring, {text: 'HAI LÒ XO GIỐNG NHAU', sub: 'đo lực: F = 2k·Δy', color: INK, part: true, dy: 20, dx: -90, a: part});
   at('field', rig.pts.field, {text: `ĐƯỜNG SỨC ĐỀU · B = ${f1(r.B, 2)} T`, sub: 'chỉ giữa hai cực (bỏ qua từ trường rìa)', color: BL, part: true, dy: 70, dx: -30, a: part});
-  at('supply', rig.pts.supply, {text: 'NGUỒN ĐIỆN', sub: 'nối qua hai trụ đỡ', color: INK, part: true, dy: -40, dx: 0, a: part});
+  at('supply', rig.pts.supply, {text: 'NGUỒN ĐIỆN', sub: 'cực + (đỏ) nối trụ phía xa người xem', color: INK, part: true, dy: -40, dx: 0, a: part});
   at('table', rig.pts.table, {text: 'BÀN XOAY · thước đo θ', sub: 'góc giữa đường sức và dây', color: INK, part: true, dy: 50, dx: 60, a: part});
   return items;
 }

@@ -39,16 +39,16 @@ const VIEWFN = {hero: () => [18, 38, 4.4, 0, 0.78, 0.04], top: () => [0, 89, 3.4
 const DURATION = 66;
 const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero'], [0.05, 'mode', 'compass'], [8, 'cmd', 'I', -5], [14, 'cmd', 'I', 5], [16, 'mode', 'lines'], [22, 'preset', 1], [22.1, 'mode', 'lines'], [22.2, 'view', 'near'], [30, 'mode', 'filings'], [34, 'preset', 2], [34.1, 'mode', 'filings'], [34.2, 'view', 'top'], [42, 'mode', 'lines'], [46, 'view', 'hero'], [48, 'td', true], [48.1, 'view', 'side'], [56, 'td', false], [56.1, 'view', 'hero'], [60, 'preset', 0]];
 const touch = () => { model.dirty = true; model.fdirty = true; };
-function cmd(k, v) { let lo = RANGE[k]?.[0], hi = RANGE[k]?.[1]; if (k === 'N') { lo = model.src === 'loop' ? 1 : 10; hi = model.src === 'loop' ? 6 : 200; v = Math.round(v); } if (k === 'r') lo = model.src === 'wire' ? 0.04 : 0; model[k] = clamp(v, lo ?? -1e9, hi ?? 1e9); touch(); }
+function cmd(k, v) { let lo = RANGE[k]?.[0], hi = RANGE[k]?.[1]; if (k === 'N') { lo = model.src === 'loop' ? 1 : 10; hi = model.src === 'loop' ? 6 : 200; v = Math.round(v); } if (k === 'r') lo = model.src === 'wire' ? 0.05 : 0; model[k] = clamp(v, lo ?? -1e9, hi ?? 1e9); touch(); }
 function curveFor(s) {
-  if (s.src === 'wire') { const m = [], id = []; for (let i = 0; i <= 60; i++) { const r = 0.04 * Math.pow(0.6 / 0.04, i / 60); m.push([r, Math.abs(wireB(s.I || 1e-9, r))]); id.push([r, Math.abs(wireIdeal(s.I || 1e-9, r))]); } const mx = Math.max(...id.map((p) => p[1])), mn = Math.min(...m.map((p) => p[1])); return {model: m, ideal: id, lo: 10 ** Math.floor(Math.log10(mn)), hi: 10 ** Math.ceil(Math.log10(mx))}; }
+  if (s.src === 'wire') { const m = [], id = []; for (let i = 0; i <= 60; i++) { const r = 0.05 * Math.pow(0.5 / 0.05, i / 60); m.push([r, Math.abs(wireB(s.I || 1e-9, r))]); id.push([r, Math.abs(wireIdeal(s.I || 1e-9, r))]); } const mx = Math.max(...id.map((p) => p[1])), mn = Math.min(...m.map((p) => p[1])); return {model: m, ideal: id, lo: 10 ** Math.floor(Math.log10(mn)), hi: 10 ** Math.ceil(Math.log10(mx))}; }
   const m = []; for (let i = 0; i <= 80; i++) { const u = -0.4 + (0.8 * i) / 80; m.push([u, coilField(s, u, 0, 60)[0]]); }
   const ideal = Math.abs(s.src === 'loop' ? (MU0 * s.N * s.I) / (2 * s.R) : (MU0 * s.N * s.I) / SOL.L), mx = Math.max(ideal, ...m.map((p) => Math.abs(p[1]))) || 1e-6, big = mx >= 1e-3;
   return {model: m, ideal, hi: mx * 1.15, unit: big ? 1e3 : 1e6, unitName: big ? 'mT' : 'µT'};
 }
 function setMode(m) { model.mode = m; touch(); if (m !== 'compass' && viewName === 'hero') viewName = 'near'; }
 function toggle(k) { model[k] = !model[k]; touch(); }
-function setSrc(src) { model.src = src; if (src === 'loop') { model.N = clamp(model.N, 1, 6); } else if (src === 'sol') { model.N = clamp(model.N < 10 ? 150 : model.N, 10, 200); } if (src === 'wire' && model.r < 0.04) model.r = 0.05; model.rows = []; touch(); }
+function setSrc(src) { model.src = src; if (src === 'loop') { model.N = clamp(model.N, 1, 6); } else if (src === 'sol') { model.N = clamp(model.N < 10 ? 150 : model.N, 10, 200); } if (src === 'wire' && model.r < 0.05) model.r = 0.05; model.rows = []; touch(); }
 function applyPreset(i) { const p = PRESETS[i]; setSrc(p.src); Object.assign(model, {I: p.I, N: p.src === 'sol' ? 150 : p.N, R: p.R, r: p.r, alpha: p.alpha}); model.rows = []; touch(); ui.setPreset(i); }
 const ui = createUI(app, {
   cmd(k, v) { userInput(); cmd(k, v); ui.setPreset(-1); }, mode(m) { userInput(); setMode(m); }, source(s) { userInput(); setSrc(s); ui.setPreset(-1); }, toggle(k) { userInput(); toggle(k); },
@@ -80,7 +80,8 @@ const proj = (p) => st.project(rig.worldPt(p));
 const fmtB = (T2) => (T2 >= 1e-3 ? `${(T2 * 1e3).toFixed(3).replace('.', ',')} mT` : `${(T2 * 1e6).toFixed(1).replace('.', ',')} µT`);
 function labelItems(r, s, td) {
   const items = [], part = clamp((td - 0.8) / 0.2, 0, 1), at = (id, p, o) => { const q = proj(p); items.push({id, x: q.x, y: q.y, visible: q.visible, ...o}); };
-  at('src', s.src === 'wire' ? rig.pts.wireTop : rig.pts.coil, {text: { wire: 'DÂY THẲNG ĐỨNG', loop: `KHUNG ${s.N} VÒNG · R = ${(s.R * 100).toFixed(0)} cm`, sol: `ỐNG DÂY ${s.N} VÒNG · ℓ = 30 cm` }[s.src], sub: `I = ${s.I.toFixed(1).replace('.', ',').replace('-', '−')} A (mũi tên xanh lá)`, color: GR, dy: -34, dx: 80, a: 1});
+  at('src', s.src === 'wire' ? rig.pts.wireTop : rig.pts.coil, {text: { wire: 'DÂY THẲNG ĐỨNG', loop: `KHUNG ${s.N} VÒNG · R = ${(s.R * 100).toFixed(0)} cm`, sol: `ỐNG DÂY ${s.N} VÒNG · ℓ = 40 cm` }[s.src], sub: `I = ${s.I.toFixed(1).replace('.', ',').replace('-', '−')} A (mũi tên xanh lá)`, color: GR, dy: -34, dx: 80, a: 1});
+  if (s.hand && Math.abs(s.I) > 0.05) at('hand', rig.pts.hand, {text: 'BÀN TAY PHẢI', sub: s.src === 'wire' ? 'ngón cái: chiều dòng điện · 4 ngón: chiều B' : 'bốn ngón: chiều dòng điện · ngón cái: chiều B', color: '#b06a2a', dy: -36, dx: 90, a: 1});
   at('probe', rig.pts.probe, {text: 'KIM THỬ', sub: `B = ${fmtB(r.bm)}`, color: OR, dy: -42, dx: 70, a: 1});
   at('north', rig.pts.north, {text: 'HƯỚNG BẮC', sub: s.earth ? 'từ trường Trái Đất 40 µT (đang bật)' : 'từ trường Trái Đất: bỏ qua', color: GR, dy: -20, dx: 60, a: 1});
   at('sheet', rig.pts.sheet, {text: 'TẤM BÌA TRONG SUỐT', sub: 'đặt trên 4 trụ, ngang tâm dòng điện', color: INK, part: true, dy: 30, dx: 20, a: part});
@@ -113,11 +114,11 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 window.B2 = {st, rig, model, comps, probe, readout: () => readout(model, probe), cam, tdS, tour, errors: [], shown: false, ready: false, get tier() { return tier; }, applyPreset,
-  pose(o) { if (o.td !== undefined) { tdS.on = o.td > 0.5; tdS.from = tdS.v = o.td; tdS.t0 = T - 99; } if (o.view) { tour.enabled = false; tour.run = false; setView(o.view); } if (o.preset !== undefined) applyPreset(o.preset); if (o.src) setSrc(o.src); if (o.mode) setMode(o.mode); if (o.set) { for (const [k2, v2] of Object.entries(o.set)) { if (k2 === 'earth') { model.earth = v2; touch(); } else cmd(k2, v2); } } }};
+  pose(o) { if (o.td !== undefined) { tdS.on = o.td > 0.5; tdS.from = tdS.v = o.td; tdS.t0 = T - 99; } if (o.view) { tour.enabled = false; tour.run = false; setView(o.view); } if (o.preset !== undefined) applyPreset(o.preset); if (o.src) setSrc(o.src); if (o.mode) setMode(o.mode); if (o.set) { for (const [k2, v2] of Object.entries(o.set)) { if (k2 === 'earth' || k2 === 'hand') { model[k2] = v2; touch(); } else cmd(k2, v2); } } }};
 addEventListener('error', (e) => window.B2.errors.push(String(e.message)));
 addEventListener('unhandledrejection', (e) => window.B2.errors.push('promise: ' + e.reason));
 const lesson = createLesson(ui.root, makeLesson({
-  set(o) { if (o.clear) model.rows = []; if (o.src && o.src !== model.src) setSrc(o.src); if (o.earth !== undefined) model.earth = o.earth; for (const k2 of ['I', 'N', 'R', 'r', 'alpha']) if (o[k2] !== undefined) cmd(k2, o[k2]); if (o.mode) model.mode = o.mode; touch(); ui.setPreset(-1); },
+  set(o) { if (o.clear) model.rows = []; if (o.src && o.src !== model.src) setSrc(o.src); if (o.earth !== undefined) model.earth = o.earth; if (o.hand !== undefined) model.hand = o.hand; for (const k2 of ['I', 'N', 'R', 'r', 'alpha']) if (o[k2] !== undefined) cmd(k2, o[k2]); if (o.mode) model.mode = o.mode; touch(); ui.setPreset(-1); },
 }), {ctx: () => ({s: model, r: readout(model, probe), td: tdS.v}), onSize: (px) => { lessonH = px; ui.setBottom(870 - px - 12); }});
 window.B2.lesson = lesson;
 applyPreset(0); ui.setView('hero'); ui.setPreset(-1); void TABLE; void RD; void BL; void srcHoriz;

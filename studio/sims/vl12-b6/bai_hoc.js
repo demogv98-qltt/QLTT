@@ -1,0 +1,47 @@
+// Nội dung bài học B6 (Vật lí 12 KNTT: hiện tượng cảm ứng điện từ, từ thông, suất điện động cảm ứng, định luật Lenz; ◻ thầy đối chiếu tên/số bài).
+// ctx = {s: mô hình, r: readout, td}. act = {set({mode, vcmd, N, R, open, flip, s, reset, clear})}.
+import {COIL, G, MAG, S_BOT, S_TOP} from './physics.js';
+export function makeLesson(act) {
+  const ok = (c) => c.r.settled;
+  const near = (a, b, t) => Math.abs(a - b) <= t;
+  const rowOf = (c, v) => c.s.rows.find((q) => near(q.v, v, 0.06));
+  void COIL;
+  return {
+    code: 'vl12-b6',
+    title: 'Cảm ứng điện từ: từ thông, suất điện động và định luật Lenz',
+    objectives: [
+      'Nhận biết hiện tượng cảm ứng điện từ: dòng điện xuất hiện trong cuộn dây kín khi từ thông qua cuộn dây biến thiên.',
+      'Phát biểu và vận dụng định luật Faraday: e = −NΔΦ/Δt; biết e tỉ lệ với tốc độ biến thiên từ thông, với số vòng dây N.',
+      'Vận dụng định luật Lenz xác định chiều dòng điện cảm ứng; hiểu đó là hệ quả của bảo toàn năng lượng.',
+      'Quan sát lực hãm của dòng cảm ứng lên nam châm rơi và tính nhiệt toả ra Q = mgh − KE.',
+    ],
+    steps: [
+      {type: 'do', title: 'Kéo nam châm qua cuộn dây', text: 'Kéo thanh trượt v tới +0,6 m/s: motor hạ nam châm (cực N hướng xuống) qua cuộn dây. Quan sát điện kế khi nam châm đi vào rồi đi ra phía dưới.', hints: ['Thanh trượt “v vận tốc kéo” ở bảng điều khiển.'], setup: () => act.set({mode: 'motor', N: 300, R: 10, open: false, flip: false, reset: true, clear: true}), check: (c) => c.s.mode === 'motor' && near(c.s.vcmd, 0.6, 0.1) && c.s.s < -0.25, explain: 'Kim điện kế lệch sang một phía khi nam châm đi vào cuộn dây, rồi lệch sang phía ngược lại khi nam châm đi ra. Đồ thị Φ(t) tăng rồi giảm; e(t) đổi dấu.'},
+      {type: 'choice', title: 'Nam châm nằm yên trong cuộn', text: 'Bây giờ nam châm đang nằm yên ngay giữa cuộn dây (Φ qua cuộn dây có giá trị lớn nhất). Số chỉ của điện kế là:', options: ['Khác 0 và lớn vì Φ lớn', 'Bằng 0 vì Φ không biến thiên', 'Đảo chiều liên tục'], answer: 1, wrong: ['Dòng cảm ứng tỉ lệ với tốc độ biến thiên của Φ, không phải với giá trị của Φ.', '', 'Nam châm đứng yên nên không có biến thiên.'], setup: () => act.set({mode: 'motor', s: 0, vcmd: 0, reset: false}), hints: ['e = −NΔΦ/Δt: nếu ΔΦ = 0 thì sao?'], explain: 'Chỉ có sự BIẾN THIÊN của từ thông mới gây ra suất điện động cảm ứng: nam châm đứng yên thì e = 0 dù Φ lớn.'},
+      {type: 'choice', title: 'Định luật Lenz: lúc nam châm đi vào', text: 'Cực N của nam châm tiến lại gần cuộn dây từ phía trên, từ thông hướng xuống qua cuộn dây tăng. Từ trường của dòng điện cảm ứng ở mặt trên cuộn dây sẽ hướng:', options: ['Lên, để chống lại sự tăng của từ thông', 'Xuống, để cùng chiều với từ trường nam châm', 'Không có từ trường cảm ứng'], answer: 0, wrong: ['', 'Nếu cùng chiều, từ thông sẽ càng tăng và năng lượng tự sinh ra từ không: vô lí.', 'Mạch kín nên có dòng cảm ứng.'], hints: ['Dòng cảm ứng luôn chống lại sự biến thiên của từ thông.'], explain: 'Dòng cảm ứng có chiều sao cho từ trường nó sinh ra chống lại sự biến thiên của từ thông ban đầu. Mặt trên cuộn dây trở thành cực N, đẩy cực N của nam châm lại. Nhìn từ trên xuống dòng điện cảm ứng ngược chiều kim đồng hồ.'},
+      {type: 'choice', title: 'Lúc nam châm đi ra', text: 'Khi nam châm đã qua giữa cuộn và đi ra phía dưới (từ thông hướng xuống qua cuộn dây giảm), chiều dòng điện cảm ứng so với lúc đi vào là:', options: ['Ngược lại', 'Giống hệt', 'Dòng bằng 0'], answer: 0, wrong: ['', 'Từ thông đang giảm chứ không tăng, nên dòng phải chống lại sự giảm.', 'Từ thông vẫn biến thiên nên vẫn có dòng.'], hints: ['Đồ thị e(t) đổi dấu.'], explain: 'Φ giảm thì từ trường cảm ứng cùng chiều với từ trường nam châm (để bù lại sự giảm): dòng điện đổi chiều so với lúc Φ tăng. Mặt trên cuộn dây trở thành cực S, hút nam châm lại.'},
+      {type: 'do', title: 'Đo e cực đại theo tốc độ kéo', text: 'Bấm “↺ Đưa nam châm lên”, kéo với v = 0,5 m/s qua cuộn dây rồi bấm “＋ Ghi e_max”. Lặp lại với v = 1,0 m/s.', hints: ['Mỗi lần: Đưa lên → đặt v → chờ nam châm đi qua → Ghi e_max.'], setup: () => act.set({mode: 'motor', vcmd: 0, reset: true, clear: true}), check: (c) => !!rowOf(c, 0.5) && !!rowOf(c, 1.0), explain: 'Bảng có hai dòng. e_max khi v gấp đôi cũng gấp đôi: e tỉ lệ với tốc độ biến thiên của từ thông.'},
+      {type: 'predict', title: 'Tỉ số e_max(v = 1,0)/e_max(v = 0,5)', text: 'Từ bảng số liệu, tính tỉ số hai suất điện động cực đại.', unit: 'lần', hints: ['Chia hai số trong cột e_max.'], answer: (c) => { const a = rowOf(c, 1.0), b = rowOf(c, 0.5); return a && b ? a.emax / b.emax : 2; }, tol: 0.1, explain: 'Tỉ số = 2: ΔΦ/Δt tăng gấp đôi khi nam châm đi nhanh gấp đôi.'},
+      {type: 'choice', title: 'Số vòng dây', text: 'Giữ nguyên vận tốc kéo, tăng số vòng dây N từ 300 lên 600 (thực tế: quấn thêm). Suất điện động cực đại sẽ:', options: ['Tăng gấp đôi', 'Giảm một nửa', 'Không đổi'], answer: 0, wrong: ['', 'Mỗi vòng dây đều có suất điện động riêng, các vòng nối tiếp nên cộng lại.', 'e = −NΔΦ/Δt phụ thuộc N.'], hints: ['e = −N·ΔΦ/Δt, N vòng nối tiếp.'], explain: 'e tỉ lệ thuận với N (các vòng nối tiếp, mỗi vòng cùng một từ thông). Bạn có thể kiểm tra bằng thanh trượt N rồi ghi e_max.'},
+      {type: 'do', title: 'Thả rơi nam châm, mạch HỞ', text: 'Bấm “Thả rơi”. Chọn thí nghiệm mẫu 2 hoặc để mạch HỞ rồi bấm “▼ THẢ nam châm” (chọn tốc độ ×0,25 để dễ quan sát).', hints: ['Nút “Thả rơi” → “Mạch: HỞ” → “THẢ”.'], setup: () => act.set({mode: 'fall', open: true, R: 2, N: 300, flip: false, reset: true, clear: true}), check: (c) => c.s.mode === 'fall' && c.s.open && c.r.hit, explain: 'Mạch hở nên không có dòng điện, nhưng vẫn có suất điện động (đo bằng vôn kế). Nam châm rơi tự do.'},
+      {type: 'predict', title: 'Đoán trước: thời gian rơi', text: 'Nam châm rơi tự do từ độ cao h = 0,6 m (từ vị trí thả đến tấm đệm). Tính t = √(2h/g) với g = 9,8 m/s².', unit: 's', hints: ['t = √(2·0,6/9,8).'], answer: () => Math.sqrt(2 * (S_TOP - S_BOT) / G), tol: 0.02, explain: 'Khoảng 0,350 s. Mô phỏng cho t = 0,350 s khi mạch hở: đúng rơi tự do.'},
+      {type: 'do', title: 'Thả rơi, mạch KÍN', text: 'Bấm “Mạch: HỞ” để đóng mạch (điện trở R = 2 Ω), bấm “↺ Đặt lại” rồi “▼ THẢ nam châm”.', hints: ['Nút Mạch → Đặt lại → THẢ.'], check: (c) => c.s.mode === 'fall' && !c.s.open && c.r.hit, explain: 'Lần này có dòng cảm ứng lớn trong cuộn dây.'},
+      {type: 'choice', title: 'Thời gian rơi khi mạch kín', text: 'So với khi mạch hở, thời gian rơi khi mạch kín:', options: ['Lớn hơn: dòng cảm ứng làm nam châm bị hãm', 'Nhỏ hơn', 'Như nhau'], answer: 0, wrong: ['', 'Nam châm không thể rơi nhanh hơn tự do.', 'Có dòng cảm ứng nên có lực từ cản chuyển động (Lenz).'], hints: ['So số t trong khung bên trái.'], explain: 'Theo Lenz, dòng cảm ứng luôn chống lại nguyên nhân sinh ra nó: lực từ hãm nam châm. Mạch kín có điện trở R nhỏ càng hãm mạnh. Mô phỏng cho t ≈ 0,37 s so với 0,35 s.'},
+      {type: 'predict', title: 'Bảo toàn năng lượng', text: 'Thế năng lúc thả: mgh = 0,08·9,8·0,6 = 0,470 J. Động năng lúc chạm đệm đọc ở khung bên trái. Nhiệt toả ra trong dây Q = mgh − KE bằng bao nhiêu mJ?', unit: 'mJ', hints: ['Q = 470 mJ − KE (đổi J ra mJ).'], answer: (c) => (c.r.E0 - c.r.KEhit) * 1e3, tol: 6, explain: 'Q ≈ 109 mJ (khi R = 2 Ω): đúng bằng nhiệt Joule ∫e²/R dt mô phỏng tính độc lập. Công của lực hãm biến thành nhiệt: định luật Lenz là hệ quả của bảo toàn năng lượng.'},
+      {type: 'do', title: 'Bóc tách thiết bị', text: 'Bấm TEARDOWN (phím T): ống thuỷ tinh, cuộn dây, đệm xốp, giá đỡ.', hints: ['Nút cam “TEARDOWN”.'], check: (c) => c.td > 0.85, explain: 'Cuộn dây quấn quanh ống thuỷ tinh; nam châm rơi bên trong ống. Mũi tên xanh lá quanh cuộn là chiều dòng cảm ứng.'},
+    ],
+    quiz: [
+      {q: 'Từ thông qua một vòng dây là Φ = BS·cosα. Đơn vị của từ thông trong SI là:', options: ['Tesla (T)', 'Weber (Wb)', 'Henry (H)', 'Vôn (V)'], answer: 1, explain: 'Từ thông đo bằng weber (Wb): 1 Wb = 1 T·m².'},
+      {q: 'Suất điện động cảm ứng trong cuộn dây N vòng được tính bằng:', options: ['e = NΔΦ/Δt', 'e = −NΔΦ/Δt', 'e = −ΔΦ/(NΔt)', 'e = Φ/Δt'], answer: 1, explain: 'Định luật Faraday: e = −N·ΔΦ/Δt (dấu trừ biểu thị định luật Lenz).'},
+      {q: 'Khi nam châm đứng yên trong lòng cuộn dây kín thì:', options: ['Có dòng cảm ứng lớn nhất', 'Không có dòng cảm ứng', 'Dòng cảm ứng đổi chiều liên tục', 'Dòng cảm ứng nhỏ nhưng khác 0'], answer: 1, explain: 'Từ thông không biến thiên nên e = 0.'},
+      {q: 'Theo định luật Lenz, dòng điện cảm ứng có chiều sao cho từ trường nó sinh ra:', options: ['Cùng chiều với từ trường ngoài', 'Chống lại sự biến thiên của từ thông qua mạch', 'Luôn hướng lên', 'Luôn hướng xuống'], answer: 1, explain: 'Dòng cảm ứng có chiều chống lại sự biến thiên của từ thông sinh ra nó.'},
+      {q: 'Kéo nam châm qua cuộn dây với tốc độ gấp đôi thì suất điện động cảm ứng cực đại:', options: ['Giảm một nửa', 'Không đổi', 'Tăng gấp đôi', 'Tăng gấp bốn'], answer: 2, explain: 'e = N|ΔΦ/Δt| tỉ lệ với tốc độ biến thiên từ thông, nên tăng gấp đôi.'},
+    ],
+    summary: [
+      'Từ thông Φ = B·S·cosα (đơn vị Wb). Dòng điện cảm ứng xuất hiện khi từ thông qua mạch kín biến thiên.',
+      'Định luật Faraday: e = −NΔΦ/Δt. Nam châm đứng yên (Φ không đổi) thì e = 0.',
+      'Định luật Lenz: dòng cảm ứng chống lại sự biến thiên của từ thông; nam châm rơi qua cuộn dây kín bị hãm, phần cơ năng mất đi biến thành nhiệt Joule.',
+      'e tỉ lệ với N và với tốc độ biến thiên của từ thông; đổi chiều biến thiên (vào/ra) thì đổi chiều dòng cảm ứng.',
+    ],
+  };
+}

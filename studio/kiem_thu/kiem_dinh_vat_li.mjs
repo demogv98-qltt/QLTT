@@ -78,7 +78,7 @@ const integ = (f, y0, t1, n = 20000) => { let y = y0, h = t1 / n; for (let i = 0
   }
   T('B3 F⃗ = I·l⃗×B⃗ trùng Σ q·v×B của các hạt tải (4 ca, có đổi dấu I)', ok); T('B3 |F| = B·I·l·sinθ, F ⟂ dây và F ⟂ B', ok2); T('B3 cân bằng lò xo: 2k·e = mg − F, “F đo” trùng F lí thuyết', ok3);
   const a = {...P.createModel(), B: 0.2, l: 0.2, th: 90, I: 3}, b2 = {...a, I: -3}; T('B3 đổi chiều I → F đổi chiều (cùng độ lớn)', close(P.forceUp(a), -P.forceUp(b2), 1e-12) && P.forceUp(a) > 0);
-  let maxUp = 0; for (const th of [35, 90]) for (const l of [0.1, 0.2]) for (const I of [-5, 5]) maxUp = Math.max(maxUp, Math.abs(0.3 * I * l * Math.sin(th * Math.PI / 180)) / (2 * P.P.k)); T('B3 thanh dịch tối đa < bán kính đĩa cực (không ra khỏi từ trường đều)', maxUp < 0.05, `${(maxUp * 100).toFixed(2)} cm < 5 cm`); }
+  let maxUp = 0; for (const th of [35, 90]) for (const l of [0.1, 0.2]) for (const I of [-5, 5]) maxUp = Math.max(maxUp, Math.abs(0.3 * I * l * Math.sin(th * Math.PI / 180)) / (2 * P.P.k)); T('B3 thanh dịch tối đa < nửa chiều cao mặt cực (0,08 m): không ra khỏi từ trường đều', maxUp < 0.08, `${(maxUp * 100).toFixed(2)} cm < 8 cm`); }
 // ---- B1: từ trường nam châm thanh + Trái Đất
 { const P = await import(S + 'vl12-b1/physics.js'); let e = 0; for (const [a, u, r] of [[0.015, 0.02, 0.01], [0.015, 0.1, 0.03], [0.015, -0.05, 0.2], [0.015, 0.001, 0.0149], [0.015, 0.3, 0.3]]) { const A = P.loopField(a, 3, u, r), B = P.loopFieldNumeric(a, 3, u, r); e = Math.max(e, Math.hypot(A[0] - B[0], A[1] - B[1]) / Math.hypot(...B)); }
   T('B1 từ trường vòng dây (công thức elliptic) khớp tích phân số Biot–Savart', e < 1e-9, `sai số tương đối lớn nhất ${e.toExponential(1)}`);
@@ -101,8 +101,8 @@ const integ = (f, y0, t1, n = 20000) => { let y = y0, h = t1 / n; for (let i = 0
   // (3) khung dây: tâm, và B_trục = μ₀NIR²/(2(R²+u²)^{3/2})
   const lp = {...P.createModel(), src: 'loop', N: 3, I: 5, R: 0.1}; let oka = true; for (const u of [0, 0.05, 0.2, -0.1]) oka = oka && close(P.coilField(lp, u, 0)[0], P.MU0 * 3 * 5 * 0.01 / (2 * Math.pow(0.01 + u * u, 1.5)), 1e-10); T('B2 khung dây: B trên trục = μ₀NIR²/2(R²+u²)^{3/2}, tâm = μ₀NI/2R', oka && close(P.centerB(lp), P.MU0 * 15 / 0.2, 1e-12));
   // (4) ống dây: trung tâm so với công thức đóng ống dây hữu hạn μ₀nI·L/√(L²+4R²); dài vô hạn → μ₀nI
-  const so = {...P.createModel(), src: 'sol', N: 150, I: 2}; const nI = P.MU0 * 150 / 0.3 * 2, ex = nI * 0.3 / Math.sqrt(0.09 + 4 * 0.0004); T('B2 ống dây (hữu hạn): B giữa ống = μ₀nI·ℓ/√(ℓ²+4R²) (tổng 200 vòng mịn)', close(P.centerB(so), ex, 2e-3), `${(P.centerB(so) * 1e3).toFixed(4)} vs ${(ex * 1e3).toFixed(4)} mT`);
-  T('B2 ống dây: B ở đầu ống ≈ nửa B ở giữa (±3 %)', close(Math.abs(P.coilField(so, 0.15, 0)[0]) / P.centerB(so), 0.5, 0.03));
+  const so = {...P.createModel(), src: 'sol', N: 150, I: 2}; const nI = P.MU0 * 150 / 0.4 * 2, ex = nI * 0.4 / Math.sqrt(0.16 + 4 * 0.000625); T('B2 ống dây (hữu hạn): B giữa ống = μ₀nI·ℓ/√(ℓ²+4R²) (tổng 200 vòng mịn)', close(P.centerB(so), ex, 2e-3), `${(P.centerB(so) * 1e3).toFixed(4)} vs ${(ex * 1e3).toFixed(4)} mT`);
+  T('B2 ống dây: B ở đầu ống ≈ nửa B ở giữa (±3 %)', close(Math.abs(P.coilField(so, 0.2, 0)[0]) / P.centerB(so), 0.5, 0.03));
   // (5) div B = 0 cho khung dây
   let dv = 0; for (const [u, r] of [[0.05, 0.03], [0.2, 0.15], [-0.1, 0.08]]) { const h = 1e-5, f = (uu, rr) => P.coilField(lp, uu, rr); const div = (f(u + h, r)[0] - f(u - h, r)[0]) / (2 * h) + ((r + h) * f(u, r + h)[1] - (r - h) * f(u, r - h)[1]) / (2 * h * r); dv = Math.max(dv, Math.abs(div) / (Math.hypot(...f(u, r)) / r)); } T('B2 ∇·B = 0 cho khung dây', dv < 1e-5, dv.toExponential(1));
   T('B2 đường sức khung dây: tích phân RK4 khép kín', P.traceCoil({...lp, I: 1}, 0.05).closed);

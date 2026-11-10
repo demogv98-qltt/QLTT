@@ -6,10 +6,10 @@
 import {loopField, loopFieldNumeric, MU0} from '../vl12-b1/physics.js';
 export {loopField, loopFieldNumeric, MU0};
 export const BE = 4e-5, D2R = Math.PI / 180;
-export const WIRE = {d1: 0.25, d2: 0.65}, SOL = {L: 0.3, R: 0.02};
-export const RANGE = {I: [-10, 10], N: [1, 200], R: [0.06, 0.2], r: [0, 0.6], alpha: [0, 360]};
+export const WIRE = {d1: 0.25, d2: 0.65}, SOL = {L: 0.4, R: 0.025};
+export const RANGE = {I: [-10, 10], N: [1, 200], R: [0.06, 0.2], r: [0, 0.5], alpha: [0, 360]};
 export const SRC = ['wire', 'loop', 'sol'];
-export const createModel = () => ({src: 'wire', I: 5, N: 1, R: 0.1, earth: false, mode: 'compass', r: 0.1, alpha: 0, rows: [], t: 0, speed: 1, lines3d: false, dirty: true});
+export const createModel = () => ({src: 'wire', I: 5, N: 1, R: 0.1, earth: false, hand: true, mode: 'compass', r: 0.1, alpha: 0, rows: [], t: 0, speed: 1, lines3d: false, dirty: true});
 export const nTurns = (s) => (s.src === 'wire' ? 1 : s.src === 'loop' ? s.N : s.N);
 export const wireB = (I, r) => MU0 * I / (4 * Math.PI * r) * (WIRE.d1 / Math.hypot(r, WIRE.d1) + WIRE.d2 / Math.hypot(r, WIRE.d2));
 export const wireIdeal = (I, r) => MU0 * I / (2 * Math.PI * r);
@@ -31,7 +31,7 @@ export const theory = (s) => (s.src === 'wire' ? wireIdeal(s.I, Math.max(s.r, 1e
 /** B tại tâm / giữa ống (đúng, theo mô hình) */
 export const centerB = (s) => (s.src === 'loop' ? Math.abs(coilField(s, 0, 0)[0]) : s.src === 'sol' ? Math.abs(coilField(s, 0, 0)[0]) : NaN);
 // ---- đường sức cho khung/ống dây: tích phân RK4 theo B trong mặt phẳng chứa trục ----
-export function traceCoil(s, rho0, ds = 0.005, R = 0.62) {
+export function traceCoil(s, rho0, ds = 0.005, R = 0.5) {
   const f = (u, r) => { const [a, b] = coilField(s, u, Math.max(r, 0), 40), n = Math.hypot(a, b) || 1; return [a / n, b / n]; };
   const run = (dir) => { let u = 0, r = rho0; const pts = [[u, r]]; let closed = false;
     for (let i = 0; i < 5000; i++) { const g = (uu, rr) => { const v = f(uu, rr); return [v[0] * dir, v[1] * dir]; }, k1 = g(u, r), k2 = g(u + k1[0] * ds / 2, r + k1[1] * ds / 2), k3 = g(u + k2[0] * ds / 2, r + k2[1] * ds / 2), k4 = g(u + k3[0] * ds, r + k3[1] * ds);
@@ -54,7 +54,7 @@ export function advance(s, dt, comps) { if (s.dirty) refresh(s, comps); let left
 export function readout(s, probe) {
   const [px, pz] = probePos(s), m = srcHoriz(s, px, pz), bm = Math.hypot(...m), th = theory(s), fixDeg = (d) => ((d + 180) % 360 + 360) % 360 - 180;
   const t = [m[0], m[1] - (s.earth ? BE : 0)], east = (vx, vz) => Math.atan2(vx, -vz) / D2R, psiEq = Math.atan2(t[1], t[0]);
-  return {px, pz, bm, th, ratio: th ? bm / Math.abs(th) : NaN, src: s.src, I: s.I, N: s.N, R: s.R, r: s.r, alpha: s.alpha, earth: s.earth, mode: s.mode, rows: s.rows, dir: east(m[0], m[1]), needle: probe ? east(Math.cos(probe.psi), Math.sin(probe.psi)) : NaN,
+  return {px, pz, bm, th, ratio: Math.abs(th) > 1e-12 ? bm / Math.abs(th) : 0, atCenter: s.src === 'wire' || s.r < 0.012, src: s.src, I: s.I, N: s.N, R: s.R, r: s.r, alpha: s.alpha, earth: s.earth, mode: s.mode, rows: s.rows, dir: east(m[0], m[1]), needle: probe ? east(Math.cos(probe.psi), Math.sin(probe.psi)) : NaN,
     settled: !probe || (Math.abs(probe.w) < 0.05 && Math.abs(fixDeg((probe.psi - psiEq) / D2R)) < 1.5)};
 }
 export const record = (s) => { const [px, pz] = probePos(s); s.rows.push({src: s.src, r: s.r, I: s.I, N: s.N, R: s.R, B: Math.hypot(...srcHoriz(s, px, pz))}); return true; };

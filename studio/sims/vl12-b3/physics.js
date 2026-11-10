@@ -27,6 +27,7 @@ export function advance(s, dt) {
   while (left > 1e-9) {
     const h = Math.min(left, 0.002); left -= h;
     s.I += (s.cmd.I - s.I) * (1 - Math.exp(-h / P.lag));
+    const near = Math.abs(s.e - eqExt(s)) < 6e-5 && Math.abs(s.v) < 0.002 && Math.abs(s.I - s.cmd.I) < 0.02; s.hold = near ? (s.hold || 0) + h : 0;
     const a = (P.m * G - forceUp(s) - 2 * P.k * s.e - P.damp * s.v) / P.m; // e: xuống dương, lực từ hướng lên khi F_y > 0
     s.v += a * h; s.e += s.v * h; s.t += h;
   }
@@ -35,6 +36,6 @@ export function advance(s, dt) {
 export function readout(s) {
   const e0 = sag0(), up = e0 - s.e, Fm = 2 * P.k * up, Ft = forceUp(s), fv = forceVec(s), b = bHat(s.th);
   return {B: s.B, l: s.l, th: s.th, I: s.I, Icmd: s.cmd.I, F: Math.abs(Ft), Fy: Ft, Fmeas: Fm, up, dir: Ft > 1e-6 ? 1 : Ft < -1e-6 ? -1 : 0, fv, b,
-    settled: Math.abs(s.e - eqExt(s)) < 6e-5 && Math.abs(s.v) < 0.002 && Math.abs(s.I - s.cmd.I) < 0.02, sinth: Math.sin(s.th * D2R), rows: s.rows, kk: 2 * P.k, e: s.e};
+    settled: (s.hold || 0) > 0.3 && Math.abs(s.I - s.cmd.I) < 0.02, sinth: Math.sin(s.th * D2R), rows: s.rows, kk: 2 * P.k, e: s.e};
 }
 export function record(s) { const r = readout(s); if (!r.settled) return false; s.rows.push({I: s.cmd.I, B: s.B, l: s.l, th: s.th, F: r.Fmeas, up: r.up}); return true; }

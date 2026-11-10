@@ -33,9 +33,10 @@ const c3 = Math.hypot(...P.srcHoriz({src: 'loop', N: 3, I: 5, R: 0.1}, 0, 0)) * 
 await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B13 R gấp đôi → B giảm nửa:'); await next();
 await clickSrc('sol'); await slide('N', 150); await slide('I', 2); await slide('r', 0); await page.waitForFunction(() => window.B2.readout().settled, null, {timeout: 60000}); chk(await waitDone(), 'B14 ống dây 150 vòng, I = 2 A:'); await next();
 const cs = Math.hypot(...P.srcHoriz({src: 'sol', N: 150, I: 2, R: 0.1}, 0, 0)) * 1e3; chk(await predict(cs.toFixed(3)), `B15 B trong ống = ${cs.toFixed(3)} mT:`); await next();
-const re = Math.hypot(...P.srcHoriz({src: 'sol', N: 150, I: 2, R: 0.1}, 0.15, 0)) / Math.hypot(...P.srcHoriz({src: 'sol', N: 150, I: 2, R: 0.1}, 0, 0)); chk(await predict(re.toFixed(3)), `B16 tỉ số đầu/giữa = ${re.toFixed(3)}:`); await next();
+const re = Math.hypot(...P.srcHoriz({src: 'sol', N: 150, I: 2, R: 0.1}, 0.2, 0)) / Math.hypot(...P.srcHoriz({src: 'sol', N: 150, I: 2, R: 0.1}, 0, 0)); chk(await predict(re.toFixed(3)), `B16 tỉ số đầu/giữa = ${re.toFixed(3)}:`); await next();
 await page.click('.opt.sopt[data-k="1"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B17 chọn sai (đầu trái là cực N) bị từ chối:'); await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B17 đầu phải là cực N:'); await next();
-await page.click('#b-td'); await wait(6000); chk(await waitDone(), 'B18 teardown:'); await page.screenshot({path: out + '/L2-b18.png'}); await next();
+await page.click('#t-hand'); chk(await waitDone(), 'B18 hiện bàn tay phải:'); await page.screenshot({path: out + '/L2-b18-hand.png'}); await next();
+await page.click('#b-td'); await wait(6000); chk(await waitDone(), 'B19 teardown:'); await page.screenshot({path: out + '/L2-b18.png'}); await next();
 const key = [2, 0, 1, 0, 1]; let sc = 0; for (const k of key) { await page.click(`.opt[data-k="${k}"]`); await wait(150); if ((await txt()).includes('Chính xác')) sc++; await page.click('#qnext'); await wait(250); }
 chk(sc === 5, `Trắc nghiệm ${sc}/5:`); console.log('KẾT:', (await txt()).slice(0, 100));
 console.log('lỗi console:', JSON.stringify([...errs, ...(await page.evaluate(() => window.B2.errors))]), '| mục KHÔNG ĐẠT =', fail);

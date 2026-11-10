@@ -22,7 +22,7 @@ chk(await predict('1.5'), 'B3 Δy=1,5 cm:'); await next();
 await page.click('.opt.sopt[data-k="0"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B4 chọn sai (vẫn đi lên) bị từ chối:'); await page.click('.opt.sopt[data-k="1"]'); await wait(300); chk(await waitDone(5000), 'B4 chọn đúng:'); await next();
 await slide('I', -3); chk(await waitDone(), 'B5 I=−3 A:'); await next();
 await page.click('.opt.sopt[data-k="1"]'); await wait(300); chk(await waitDone(5000), 'B6 bàn tay trái:'); await next();
-for (const I of [1, 2, 3, 4, 5]) { await slide('I', I); await page.waitForFunction(() => window.B3.readout().settled, null, {timeout: 60000}); await page.click('#b-rec'); await wait(200); }
+for (const I of [1, 2, 3, 4, 5]) { await slide('I', I); await page.waitForFunction(() => window.B3.readout().settled, null, {timeout: 60000}); const n0 = await page.evaluate(() => window.B3.model.rows.length); await page.click('#b-rec'); await wait(200); chk((await page.evaluate(() => window.B3.model.rows.length)) === n0 + 1, `B7 ghi I=${I}:`); }
 chk(await waitDone(), 'B7 ghi 5 số liệu:'); const rows = await page.evaluate(() => window.B3.model.rows.map((r) => [r.I, +r.F.toFixed(4)])); console.log('  bảng:', JSON.stringify(rows)); chk(rows.every((r) => Math.abs(r[1] - 0.04 * r[0]) < 0.002), 'B7 F đo = 0,04·I:'); await next();
 await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B8 đồ thị thẳng qua gốc:'); await next();
 chk(await predict('0.2'), 'B9 B = 0,2 T:'); await next();

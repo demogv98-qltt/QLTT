@@ -5,7 +5,8 @@
 export const MU0 = 4e-7 * Math.PI;
 export const MAG = {a: 0.015, L: 0.12, M: 24};
 export const BE = 4e-5; // T, thành phần nằm ngang của từ trường Trái Đất (khoảng 0,4 Gauss; chỉ Bắc)
-export const H_SHEET = 0.0185; // m: độ cao tấm bìa/kim so với trục nam châm
+export const H_SHEET = 0.034; // m: độ cao của kim la bàn / kim thử so với trục nam châm (đo từ hình học của thiết bị)
+export const H_FIL = 0.022; // m: độ cao mạt sắt (mặt trên tấm bìa)
 export const RANGE = {Br: [0.05, 0.5], phi: [0, 360], r: [0.08, 0.6], alpha: [0, 360]};
 export const D2R = Math.PI / 180;
 
@@ -64,6 +65,7 @@ export function newCompass(x, z) { return {x, z, psi: -Math.PI / 2, w: 0, B: [0,
 export function stepCompass(c, dt) {
   const bm = Math.hypot(c.B[0], c.B[1]); c.mag = bm; if (bm < 1e-9) { c.w *= Math.exp(-dt * 3); c.psi += c.w * dt; return; }
   const psiB = Math.atan2(c.B[1], c.B[0]), w2 = Math.min(W0 * W0 * bm / BE, 900), z = 0.3; let d = c.psi - psiB; d = Math.atan2(Math.sin(d), Math.cos(d));
+  if (Math.abs(Math.sin(d)) < 1e-3 && Math.abs(c.w) < 1e-2 && Math.cos(d) < 0) c.w += 0.4 * dt * 60 * (c.psi > 0 ? 1 : -1); // kim thật luôn có nhiễu nhỏ
   c.w += (-w2 * Math.sin(d) - 2 * z * Math.sqrt(w2) * c.w) * dt; c.psi += c.w * dt;
 }
 export function refresh(s, grid) { for (const c of grid) c.B = totalHoriz(s, c.x, c.z); s.dirty = false; }

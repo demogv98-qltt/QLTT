@@ -20,7 +20,7 @@ export function createUI(app, hooks) {
     <canvas class="gr" id="g1" width="680" height="340"></canvas></div>`));
   const sl = (id, label, a, b, step, c) => `<div class="sl" style="--c:${c}"><div class="top"><div>${label} <span>${a}…${b}</span></div><b id="sv-${id}"></b></div><input id="s-${id}" type="range" min="${a}" max="${b}" step="${step}"></div>`;
   root.appendChild(el(`<div class="panel" id="right"><div class="ptitle"><span>BẢNG ĐIỀU KHIỂN</span><span>CONTROLS</span></div>
-    ${sl('I', 'I dòng điện (A)', RANGE.I[0], RANGE.I[1], 0.1, GR)}${sl('B', 'B cảm ứng từ (T)', RANGE.B[0], RANGE.B[1], 0.01, BL)}${sl('l', 'l dây trong từ trường (m)', RANGE.l[0], RANGE.l[1], 0.01, TL)}${sl('th', 'θ góc dây–đường sức (°)', RANGE.th[0], RANGE.th[1], 1, PU)}
+    ${sl('I', 'I dòng điện (A)', RANGE.I[0], RANGE.I[1], 0.1, GR)}${sl('B', 'B cảm ứng từ (T)', RANGE.B[0], RANGE.B[1], 0.01, BL)}${sl('l', 'l đoạn dây chịu lực (m)', RANGE.l[0], RANGE.l[1], 0.01, TL)}${sl('th', 'θ góc dây–đường sức (°)', RANGE.th[0], RANGE.th[1], 1, PU)}
     <div class="rw"><button class="btn big" id="b-rec" style="margin:0;height:38px;font-size:14px;flex:2;box-shadow:none">＋ Ghi số liệu</button><button class="pre" id="b-clear" style="margin:0;flex:1;text-align:center;font:700 12px Inter,sans-serif">Xoá bảng</button><select id="spd" style="flex:1;border:1px solid #b6c6d0;border-radius:4px;font:700 13px Inter"><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option></select></div>
     <div class="ptitle" style="margin-top:2px"><span>THÍ NGHIỆM MẪU</span><span>PRESETS</span></div>
     ${PRESETS.map((p, i) => `<button class="pre" data-i="${i}" style="padding:5px 10px;margin-bottom:5px"><b style="font-size:13px">${p.vi}</b><span>${p.note}</span></button>`).join('')}
@@ -48,7 +48,7 @@ export function createUI(app, hooks) {
     update(r, s) {
       const set = (id, txt, bar, col) => { $('v' + id).innerHTML = txt; const b = $('b' + id); b.style.width = Math.min(100, Math.abs(bar) * 100) + '%'; if (col) b.style.background = col; };
       set('B', `${f(r.B, 2)}<small>T</small>`, r.B / 0.3); set('I', `${f(r.I, 2)}<small>A</small>`, r.I / 5); set('th', `${f(r.th, 0)}<small>°</small>`, r.th / 90); set('F', `${f(r.F, 3)}<small>N</small>`, r.F / 0.4); set('Fm', `${f(Math.abs(r.Fmeas), 3)}<small>N</small>`, Math.abs(r.Fmeas) / 0.4);
-      $('tag').innerHTML = r.dir === 0 ? 'Chưa có dòng điện: <b>F = 0</b>, thanh đứng tại vạch 0' : `Lực từ hướng <b style="color:${OR}">${r.dir > 0 ? 'LÊN' : 'XUỐNG'}</b> · F<sub>đo</sub> = 2k·Δy = ${f(Math.abs(r.Fmeas), 3)} N`;
+      $('tag').innerHTML = s.note && performance.now() / 1000 - s.note.at < 4 ? `<b style="color:#c0392b">${s.note.text}</b>` : r.dir === 0 ? 'Chưa có dòng điện: <b>F = 0</b>, thanh đứng tại vạch 0' : `Lực từ hướng <b style="color:${OR}">${r.dir > 0 ? 'LÊN' : 'XUỐNG'}</b> · F<sub>đo</sub> = 2k·Δy = ${f(Math.abs(r.Fmeas), 3)} N`;
       // hình từ trên xuống: trục x sang phải, z hướng xuống; F hướng lên/ra khỏi trang = ⊙, xuống/vào trang = ⊗
       { const c = $('g0'), g = c.getContext('2d'), w = c.width, h = c.height; g.clearRect(0, 0, w, h); g.fillStyle = '#f6f9fb'; g.fillRect(0, 0, w, h);
         const cx = w / 2, cy = h / 2 + 6, K = 120; g.strokeStyle = '#c9d6de'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(20, cy); g.lineTo(w - 20, cy); g.moveTo(cx, 16); g.lineTo(cx, h - 16); g.stroke();
@@ -59,7 +59,7 @@ export function createUI(app, hooks) {
         if (Math.abs(r.I) > 0.05) { const s2 = Math.sign(r.I); arrow(g, cx + 36, cy - s2 * 40, cx + 36, cy + s2 * 40, GR, 5); g.fillStyle = GR; g.fillText('I', cx + 56, cy + 6); }
         if (r.dir) { g.strokeStyle = OR; g.fillStyle = OR; g.lineWidth = 5; const X0 = w - 70, Y0 = cy; g.beginPath(); g.arc(X0, Y0, 24, 0, 7); g.stroke(); if (r.dir > 0) { g.beginPath(); g.arc(X0, Y0, 6, 0, 7); g.fill(); } else { g.lineWidth = 4; g.beginPath(); g.moveTo(X0 - 12, Y0 - 12); g.lineTo(X0 + 12, Y0 + 12); g.moveTo(X0 + 12, Y0 - 12); g.lineTo(X0 - 12, Y0 + 12); g.stroke(); } g.font = '700 16px monospace'; g.fillText(r.dir > 0 ? 'F ra khỏi trang (lên)' : 'F vào trang (xuống)', X0 - 40, Y0 + 52); }
       }
-      $('tb').innerHTML = `<tr><th>I (A)</th><th>θ (°)</th><th>l (m)</th><th>B (T)</th><th>F (N)</th></tr>` + (r.rows.length ? r.rows.map((q) => `<tr><td>${f(q.I, 1)}</td><td>${f(q.th, 0)}</td><td>${f(q.l, 2)}</td><td>${f(q.B, 2)}</td><td>${f(Math.abs(q.F), 3)}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#6a8190">Chưa có số liệu · bấm “＋ Ghi số liệu”</td></tr>');
+      $('tb').innerHTML = `<tr><th>I (A)</th><th>θ (°)</th><th>l (m)</th><th>B (T)</th><th>F (N, + lên)</th></tr>` + (r.rows.length ? r.rows.map((q) => `<tr><td>${f(q.I, 1)}</td><td>${f(q.th, 0)}</td><td>${f(q.l, 2)}</td><td>${f(q.B, 2)}</td><td>${f(q.F, 3)}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#6a8190">Chưa có số liệu · bấm “＋ Ghi số liệu”</td></tr>');
       const c = $('g1'), g = c.getContext('2d'), w = c.width, h = c.height; g.clearRect(0, 0, w, h);
       const m = {l: 76, r: 16, t: 30, b: 34}, FM = 0.5, X = (x) => m.l + ((x + 5) / 10) * (w - m.l - m.r), Y = (y) => h - m.b - ((y + 0.5) / 1) * (h - m.t - m.b);
       g.font = '17px monospace'; g.lineWidth = 1.4; g.strokeStyle = '#e2eaef'; g.fillStyle = INK; g.textAlign = 'center';

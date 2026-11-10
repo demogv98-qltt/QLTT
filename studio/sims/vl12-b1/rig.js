@@ -1,6 +1,6 @@
 // VL12-B1 geometry: bàn, tấm bìa trong suốt đặt trên 4 trụ, nam châm thanh nằm dưới tấm bìa, 48 kim la bàn + kim thử, mạt sắt (InstancedMesh), đường sức (tính từ mô hình).
 import * as THREE from 'three';
-import {D2R, MAG, magnetField, probePos, traceLine, magnetHoriz} from './physics.js';
+import {D2R, H_FIL, MAG, magnetField, probePos, traceLine, magnetHoriz} from './physics.js';
 
 const COL = {orange: 0xe8590c, ink: 0x14303c, steel: 0x8a95a0, dark: 0x252b33, N: 0xc0392b, S: 0x2b59c3, wood: 0xcdb892, line: 0x1d4ed8};
 const mat = (c, o = {}) => new THREE.MeshStandardMaterial({color: c, metalness: 0.4, roughness: 0.5, envMapIntensity: 0.55, ...o});
@@ -56,7 +56,7 @@ export function createRig(scene) {
   const dm = new THREE.Object3D();
   pts.N = marker(mag, MAG.L / 2, 0.02, 0); pts.S = marker(mag, -MAG.L / 2, 0.02, 0); pts.mag = marker(mag, 0, -0.012, 0); pts.north = marker(root, 0, TABLE + 0.02, -0.58); pts.sheet = marker(root, 0.45, YS + 0.003, 0.5); pts.probe = marker(pg, 0, 0.03, 0); pts.rings = marker(mag, 0, 0.02, 0.02); pts.leg = marker(root, 0.5, (YS + TABLE) / 2, 0.5); pts.field = marker(mag, 0.15, 0, 0);
   const dirty = {fil: true};
-  function updateFilings(s) { for (let k = 0; k < fpos.length; k++) { const [x, z, a0] = fpos[k], m = magnetHoriz(s, x, z), bm = Math.hypot(m[0], m[1]), w = Math.min(1, Math.max(0, (bm - 1.2e-4) / 2.4e-4)); let ang = Math.atan2(-m[1], m[0]); const d = Math.atan2(Math.sin(ang - a0), Math.cos(ang - a0)); ang = a0 + d * w; dm.position.set(x, YS + 0.0036, z); dm.rotation.set(0, -ang, 0); dm.updateMatrix(); fil.setMatrixAt(k, dm.matrix); } fil.instanceMatrix.needsUpdate = true; dirty.fil = false; }
+  function updateFilings(s) { for (let k = 0; k < fpos.length; k++) { const [x, z, a0] = fpos[k], m = magnetHoriz(s, x, z, H_FIL), bm = Math.hypot(m[0], m[1]), w = Math.min(1, Math.max(0, (bm - 1.2e-4) / 2.4e-4)); let ang = Math.atan2(-m[1], m[0]); const d = Math.atan2(Math.sin(ang - a0), Math.cos(ang - a0)); ang = a0 + d * w; dm.position.set(x, YS + 0.0036, z); dm.rotation.set(0, -ang, 0); dm.updateMatrix(); fil.setMatrixAt(k, dm.matrix); } fil.instanceMatrix.needsUpdate = true; dirty.fil = false; }
   function update(r, s, td, cs, probe) {
     const e = td * td * (3 - 2 * td); for (const m of ghostMats) { m.opacity = m.userData.base * (1 - 0.85 * e); m.depthWrite = e < 0.04 && m.userData.base >= 1; }
     mag.visible = s.magnet; mag.rotation.y = s.phi * D2R; rm.opacity = 0.9 * e; rings.forEach((x) => (x.visible = s.magnet));

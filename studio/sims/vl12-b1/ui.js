@@ -14,7 +14,7 @@ export function createUI(app, hooks) {
   root.appendChild(el('<div class="chip"><b id="mode">NORMAL · NGUYÊN KHỐI</b><b id="tourchip">AUTO-TOUR</b></div>'));
   const row = (k, id, c) => `<div class="g3"><span class="k">${k}</span><span class="v" id="v${id}"></span><div class="bg"><i id="b${id}" style="background:${c}"></i></div></div>`;
   root.appendChild(el(`<div class="panel" id="left"><div class="ptitle"><span>KIM THỬ (CAM)</span><span>PROBE</span></div>
-    <div class="blk" style="--c:${OR}">${row('B_NC', 'm', RD)}${row('B_TĐ', 'e', GR)}${row('B tổng', 't', BL)}${row('Lệch', 'd', OR)}${row('r', 'r', PU)}</div>
+    <div class="blk" style="--c:${OR}">${row('B_NC', 'm', RD)}${row('B_TĐ', 'e', GR)}${row('B tổng', 't', BL)}${row('Lệch Bắc', 'd', OR)}${row('r', 'r', PU)}</div>
     <div class="res" id="tag" style="margin:0 0 6px;padding:5px 10px"></div>
     <canvas class="gr" id="g1" width="680" height="420"></canvas>
     <table class="tb" id="tb"></table></div>`));
@@ -55,7 +55,7 @@ export function createUI(app, hooks) {
       $('t-mag').classList.toggle('on', s.magnet); $('t-earth').classList.toggle('on', s.earth); $('t-3d').classList.toggle('on', s.lines3d); $('t-mag').textContent = s.magnet ? 'Nam châm: CÓ' : 'Nam châm: KHÔNG'; $('t-earth').textContent = s.earth ? 'Trái Đất: CÓ' : 'Trái Đất: KHÔNG';
       const set = (id, txt, bar, col) => { $('v' + id).innerHTML = txt; const b = $('b' + id); b.style.width = Math.min(100, Math.abs(bar) * 100) + '%'; if (col) b.style.background = col; };
       const lg = (v) => Math.max(0, Math.min(1, (Math.log10(Math.max(v, 1e-8)) + 7) / 4));
-      set('m', `${f(uT(r.bm), 1)}<small>µT</small>`, lg(r.bm)); set('e', `${f(uT(r.be), 1)}<small>µT</small>`, lg(r.be)); set('t', `${f(uT(r.bt), 1)}<small>µT</small>`, lg(r.bt)); set('d', `${f(r.needle, 0)}<small>°</small>`, Math.abs(r.needle) / 180); set('r', `${f(r.r * 100, 0)}<small>cm</small>`, r.r / 0.6);
+      set('m', `${f(uT(r.bm), 1)}<small>µT</small>`, lg(r.bm)); set('e', `${f(uT(r.be), 1)}<small>µT</small>`, lg(r.be)); set('t', `${f(uT(r.bt), 1)}<small>µT</small>`, lg(r.bt)); set('d', `${f(Math.abs(r.needle), 0)}<small>° ${r.needle < -0.5 ? 'Tây' : r.needle > 0.5 ? 'Đông' : ''}</small>`, Math.abs(r.needle) / 180); set('r', `${f(r.r * 100, 0)}<small>cm</small>`, r.r / 0.6);
       $('tag').innerHTML = r.bm > 0 ? `Tại kim: B<sub>nam châm</sub> = <b>${f(uT(r.bm), 1)} µT</b> ${r.be ? `· B<sub>TĐ</sub> = ${f(uT(r.be), 0)} µT · tỉ số ${f(r.bm / r.be, 2)}` : ''}` : 'Không có nam châm: kim chỉ hướng của từ trường Trái Đất (Bắc)';
       $('tb').innerHTML = `<tr><th>r (cm)</th><th>α (°)</th><th>B (µT)</th><th>B·r³ (10⁻⁶ T·m³)</th></tr>` + (r.rows.length ? r.rows.map((q) => `<tr><td>${f(q.r * 100, 0)}</td><td>${f(q.alpha, 0)}</td><td>${f(uT(q.B), 1)}</td><td>${f(uT(q.B) * q.r ** 3, 2)}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#6a8190">Chưa có số liệu · bấm “＋ Ghi B tại kim”</td></tr>');
       const c = $('g1'), g = c.getContext('2d'), w = c.width, h = c.height; g.clearRect(0, 0, w, h);

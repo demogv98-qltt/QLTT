@@ -33,7 +33,7 @@ function ringTexture() {
   for (const sg of [1, -1]) for (let th = 35; th <= 90; th += 5) { const big = th % 10 === 0 || th === 35; g.lineWidth = big ? 3 : 1.5; const [x0, y0] = pt(th, R0), [x1, y1] = pt(th, big ? R1 : (R0 + R1) / 2); const px = N / 2 + (x0 - N / 2) * sg, py = N / 2 + (y0 - N / 2) * sg, qx = N / 2 + (x1 - N / 2) * sg, qy = N / 2 + (y1 - N / 2) * sg; g.beginPath(); g.moveTo(px, py); g.lineTo(qx, qy); g.stroke(); if (sg === 1 && (th % 10 === 0)) { const [tx, ty] = pt(th, R1 + 0.022); g.fillText(th + '°', tx, ty); } }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
-export const YC = 0.9, YTOP = 1.5, GAP = 0.36, TH = 0.05, ZS = 0.42, ZP = 0.55, TABLE = 0.45;
+export const PH = 0.16, YC = 0.9, YTOP = 1.5, GAP = 0.36, TH = 0.05, ZS = 0.42, ZP = 0.55, TABLE = 0.45;
 
 export function createRig(scene) {
   const root = new THREE.Group(); scene.add(root); const pts = {};
@@ -45,12 +45,13 @@ export function createRig(scene) {
   // trụ đỡ và thanh ngang
   const gp = [];
   for (const z of [-ZP, ZP]) { add(root, new THREE.CylinderGeometry(0.014, 0.014, YTOP + 0.015 - TABLE, 16), steel, 0, (YTOP + 0.015 + TABLE) / 2, z); add(root, new THREE.CylinderGeometry(0.05, 0.05, 0.02, 24), mat(COL.dark, {metalness: 0.4}), 0, TABLE + 0.01, z); }
-  gp.push(gmat(COL.dark, {metalness: 0.4})); add(root, new THREE.BoxGeometry(0.03, 0.03, 2 * ZP + 0.05), gp[0], 0, YTOP, 0);
+  gp.push(gmat(COL.wood, {metalness: 0.05, roughness: 0.8})); add(root, new THREE.BoxGeometry(0.03, 0.03, 2 * ZP + 0.05), gp[0], 0, YTOP, 0);
+  for (const z of [-1, 1]) root.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, YTOP + 0.025, z * ZP), new THREE.Vector3(0, YTOP + 0.06, z * (ZP + ZS) / 2), new THREE.Vector3(0, YTOP - 0.015, z * ZS)], false, 'centripetal'), 24, 0.0035, 6), mat(z < 0 ? COL.N : COL.ink, {metalness: 0.2, roughness: 0.6})));
   const term = []; for (const z of [-ZP, ZP]) term.push(add(root, new THREE.CylinderGeometry(0.014, 0.014, 0.03, 14).rotateZ(Math.PI / 2), mat(COL.brass, {metalness: 0.8}), -0.03, 0.6, z, false));
   // nguồn điện
   add(root, new THREE.BoxGeometry(0.26, 0.12, 0.22), mat(0x3e5666, {metalness: 0.3}), -0.85, TABLE + 0.06, 0);
-  const sterm = []; for (const z of [-0.06, 0.06]) sterm.push(add(root, new THREE.CylinderGeometry(0.014, 0.014, 0.03, 14), mat(z > 0 ? COL.N : COL.ink, {metalness: 0.5}), -0.85, TABLE + 0.135, z, false));
-  for (const [i, z] of [-1, 1].entries()) { const A = new THREE.Vector3(-0.85, TABLE + 0.15, z * 0.06), B = new THREE.Vector3(-0.045, 0.6, z * ZP); const mid1 = new THREE.Vector3(-0.72, 0.7, z * 0.25), mid2 = new THREE.Vector3(-0.3, 0.64, z * 0.5); add(root, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([A, mid1, mid2, B]), 40, 0.004, 6), mat(i ? COL.N : COL.ink, {metalness: 0.2, roughness: 0.6}), 0, 0, 0, false); }
+  const sterm = []; for (const z of [-0.06, 0.06]) sterm.push(add(root, new THREE.CylinderGeometry(0.014, 0.014, 0.03, 14), mat(z > 0 ? COL.ink : COL.N, {metalness: 0.5}), -0.85, TABLE + 0.135, z, false));
+  for (const [i, z] of [-1, 1].entries()) { const A = new THREE.Vector3(-0.85, TABLE + 0.15, z * 0.06), B = new THREE.Vector3(-0.045, 0.6, z * ZP); const mid1 = new THREE.Vector3(-0.72, 0.7, z * 0.25), mid2 = new THREE.Vector3(-0.3, 0.64, z * 0.5); add(root, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([A, mid1, mid2, B]), 40, 0.004, 6), mat(i ? COL.ink : COL.N, {metalness: 0.2, roughness: 0.6}), 0, 0, 0, false); }
   void term; void sterm;
   // bàn xoay + nam châm (trục x cục bộ = hướng B)
   const mag = new THREE.Group(); mag.position.y = 0; root.add(mag);
@@ -62,7 +63,7 @@ export function createRig(scene) {
   for (const sg of [-1, 1]) {
     const xa = sg * (GAP / 2 + TH);
     add(mag, new THREE.CylinderGeometry(0.03, 0.03, YC - (TABLE + 0.06), 20), mm, xa, (YC + TABLE + 0.06) / 2, 0);
-    discs.push(add(mag, new THREE.CylinderGeometry(1, 1, TH, 40).rotateZ(Math.PI / 2), sg < 0 ? poleN : poleS, sg * (GAP / 2 + TH / 2), YC, 0));
+    discs.push(add(mag, new THREE.BoxGeometry(TH, 1, 1), sg < 0 ? poleN : poleS, sg * (GAP / 2 + TH / 2), YC, 0));
   }
   // đường sức (đều) giữa hai cực
   const lines = []; const lm = new THREE.MeshBasicMaterial({color: 0x2b59c3, transparent: true, opacity: 0.6});
@@ -87,11 +88,11 @@ export function createRig(scene) {
     const e = td * td * (3 - 2 * td);
     for (const m of ghostMats) { m.opacity = m.userData.base * (1 - 0.85 * e); m.depthWrite = e < 0.04 && m.userData.base >= 1; }
     mag.rotation.y = (r.th - 90) * D2R;
-    const rr = r.l / 2; discs.forEach((d) => d.scale.set(1, rr, rr));
+    const rr = (r.l * r.sinth) / 2; discs.forEach((d) => d.scale.set(1, PH, 2 * rr));
     const y = YC + r.up; rod.position.y = y; collars.forEach((c) => (c.position.y = y)); ptr.position.y = y;
     const len = YTOP - 0.015 - (y + 0.012); if (Math.abs(len - lastLen) > 0.0003) { springs.forEach((sp) => { sp.geometry.dispose(); sp.geometry = helixGeo(len); }); lastLen = len; }
     const k = Math.min(1, r.B / 0.3);
-    lines.forEach((g) => { const a = g.userData.a * rr, b = g.userData.b * rr; g.position.set(0, YC + b, a); g.children[1].position.x = 0; g.visible = Math.hypot(a, b) <= rr * 1.01; g.children[0].material.opacity = 0.25 + 0.6 * k; g.children[0].scale.set(1, 0.6 + 1.2 * k, 0.6 + 1.2 * k); g.children[1].scale.setScalar(0.7 + 0.8 * k); });
+    lines.forEach((g) => { const a = g.userData.a * rr, b = g.userData.b * PH / 2; g.position.set(0, YC + b, a); g.children[1].position.x = 0; g.visible = true; g.children[0].material.opacity = 0.25 + 0.6 * k; g.children[0].scale.set(1, 0.6 + 1.2 * k, 0.6 + 1.2 * k); g.children[1].scale.setScalar(0.7 + 0.8 * k); });
     aim(aB, [0, YC - 0.07, 0], r.b, 0.06 + 0.5 * r.B); aB.visible = false;
     aim(aI, [0, y + 0.03, -0.1 * Math.sign(r.I || 1)], [0, 0, Math.sign(r.I || 1)], Math.abs(r.I) > 0.1 ? 0.2 : 0);
     aim(aF, [0, y, 0], r.fv, Math.hypot(...r.fv) * 1.5);
