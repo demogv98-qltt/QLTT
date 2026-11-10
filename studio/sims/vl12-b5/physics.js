@@ -12,8 +12,8 @@ export const RANGE = {V: [50, 1000], B: [1, 60], alpha: [75, 90], rt: [0.01, 0.1
 export const CH = {R: 0.10, half: 0.05, x0: -0.03, z0: -0.035}; // bình: bán kính 10 cm, dài 10 cm; điểm bắn
 export const PRESETS = [
   {id: 'a', vi: 'Electron, V = 300 V, B = 1,5 mT', note: 'α = 90°: quỹ đạo tròn, r ≈ 3,9 cm', pt: 0, V: 300, B: 1.5, alpha: 90, dirB: 1},
-  {id: 'b', vi: 'Proton, V = 300 V, B = 60 mT', note: 'r ≈ 4,0 cm, lệch ngược electron (xuống)', pt: 1, V: 300, B: 60, alpha: 90, dirB: 1},
-  {id: 'c', vi: 'Electron nghiêng α = 75°', note: 'quỹ đạo xoắn ốc dọc theo B', pt: 0, V: 300, B: 1.5, alpha: 78, dirB: 1},
+  {id: 'b', vi: 'Proton, V = 300 V, B = 60 mT', note: 'r ≈ 4,2 cm, lệch ngược electron (xuống)', pt: 1, V: 300, B: 60, alpha: 90, dirB: 1},
+  {id: 'c', vi: 'Electron nghiêng α = 78°', note: 'quỹ đạo xoắn ốc dọc theo B', pt: 0, V: 300, B: 1.5, alpha: 78, dirB: 1},
 ];
 export const createModel = () => ({pt: 0, V: 300, B: 1.5, alpha: 90, dirB: 1, rt: 0.04, showRing: false, u: 0, speed: 1, rows: [], t: 0});
 export const part = (s) => PARTICLES[s.pt];

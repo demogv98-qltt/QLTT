@@ -34,7 +34,7 @@ chk(await predict((mean / 1e11).toFixed(3)), 'B12 q/m trung bình:'); await next
 await slide('alpha', 78); chk(await waitDone(), 'B13 α = 78°:'); await next();
 const pitch = P.pitch(sm({pt: 0, V: 300, B: 1.5, alpha: 78})) * 100; chk(await predict(pitch.toFixed(2)), `B14 bước ốc = ${pitch.toFixed(2)} cm:`); await next();
 await page.click('#b-td'); await wait(6000); chk(await waitDone(), 'B15 teardown:'); await page.screenshot({path: out + '/L5-b15.png'}); await next();
-const key = [1, 2, 2, 1, 1]; let sc = 0; for (const k of key) { await page.click(`.opt[data-k="${k}"]`); await wait(150); if ((await txt()).includes('Chính xác')) sc++; await page.click('#qnext'); await wait(250); }
+const key = [1, 1, 2, 1, 1]; let sc = 0; for (const k of key) { await page.click(`.opt[data-k="${k}"]`); await wait(150); if ((await txt()).includes('Chính xác')) sc++; await page.click('#qnext'); await wait(250); }
 chk(sc === 5, `Trắc nghiệm ${sc}/5:`); console.log('KẾT:', (await txt()).slice(0, 100));
 console.log('lỗi console:', JSON.stringify([...errs, ...(await page.evaluate(() => window.B5.errors))]), '| mục KHÔNG ĐẠT =', fail);
 await browser.close();

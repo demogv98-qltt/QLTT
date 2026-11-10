@@ -144,3 +144,9 @@ làm — thầy đã ưu tiên các việc khác trước).
   máy rung và ván không có giá, cổng quang treo giữa không trung.
 - **Trước khi giao một mô phỏng:** chạy `studio/kiem_thu/audit_khop_noi.mjs` (tự tìm đầu dây không chạm gì và cụm vật không chạm sàn),
   chụp ít nhất 3 góc và NHÌN ảnh. Kiểm thử số liệu không phát hiện được lỗi hình.
+
+## Kiểm định mô phỏng Vật lí 12 (bài học từ B1–B7)
+
+- Mỗi mô phỏng mới phải qua 4 lớp: (1) `node studio/kiem_thu/kiem_dinh_vat_li.mjs` (tính lại độc lập bằng RK4, tích phân số, công thức đóng), (2) `studio/kiem_thu/bai_hoc_<Mã>.mjs` (học sinh làm cả bài, có trả lời sai), (3) `audit_khop_noi.mjs` + chụp ảnh nhìn tận mắt, (4) agent phản biện `.claude/agents/kiem-dinh-mo-phong.md` (chạy bằng Agent, không tự sửa mã, chỉ báo cáo).
+- Lỗi đã gặp: **bàn tay phải vẽ thành bàn tay trái** (`kit-su-pham/tay_phai.js`) — chiều quấn của ngón tay phải NGƯỢC chiều kim đồng hồ khi nhìn từ phía ngón cái; luôn kiểm bằng số (góc θ = atan2(−z, x) phải tăng dọc cung ngón) rồi mới chụp ảnh. Cờ `settled` phải tính cả trạng thái tức thời (không chỉ biến "đã giữ yên bao lâu") để test không bị chạy đua. Kim la bàn cần nhiễu nhỏ để thoát khỏi cân bằng không bền (ngược hướng B).
+- Mọi hằng số trong lời giải (số liệu, %): lấy từ lần chạy thật, không gõ tay; mô hình rút gọn phải ghi rõ giả định trong bài.

@@ -44,7 +44,7 @@ export function createRig(scene) {
     const k = `${s.pt}|${s.V}|${s.B}|${s.alpha}|${s.dirB}`; const colr = PARTICLES[s.pt].color;
     if (k !== key) { key = k; beam.clear(); const p = path(s, 220); dur = Math.max(p.duration, 1e-12); curve = p; if (p.pts.length > 3) { const c = new THREE.CatmullRomCurve3(p.pts.map((q) => new THREE.Vector3(q[0], YC + q[1], q[2])), false, 'centripetal'); bm.color.setHex(colr); beam.add(new THREE.Mesh(new THREE.TubeGeometry(c, 300, 0.0018, 6), bm)); } comet.forEach((m) => m.material.color.setHex(colr)); fm.map = s.dirB > 0 ? ft.p : ft.n; fm.needsUpdate = true;
       const a = s.alpha * Math.PI / 180; gun.position.set(CH.x0, YC, CH.z0); gun.rotation.set(0, -(Math.PI / 2 - a), 0); const tailX = CH.x0 - 0.04 * Math.sin(a), tailZ = CH.z0 - 0.04 * Math.cos(a); mount.scale.x = Math.max(0.001, tailX + CH.R); mount.position.set(-CH.R + (tailX + CH.R) / 2, YC, tailZ); }
-    if (curve && curve.pts.length > 1) { const tt = (s.u % 1) * dur, T = dur; for (let i = 0; i < comet.length; i++) { const t = ((tt - i * 0.012 * T) % T + T) % T; const q = posAt(s, t); comet[i].position.set(q[0], YC + q[1], q[2]); } pts.particle.position.copy(comet[0].position); }
+    if (curve && curve.pts.length > 1) { const Tp = r.T, tt = (s.u * Tp) % dur; for (let i = 0; i < comet.length; i++) { const t = ((tt - i * 0.012 * Tp) % dur + dur) % dur; const q = posAt(s, t); comet[i].position.set(q[0], YC + q[1], q[2]); } pts.particle.position.copy(comet[0].position); }
     ring.visible = cm.visible = !!s.showRing; const c = center(s); ring.position.set(c[0], YC + c[1], CH.z0 + 0.003); ring.scale.set(s.rt, s.rt, 1); cm.position.set(c[0], YC + c[1], CH.z0 + 0.003);
     root.updateMatrixWorld(true);
   }
