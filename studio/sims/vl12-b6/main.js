@@ -39,7 +39,7 @@ const DURATION = 56;
 const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero'], [0.05, 'reset'], [1, 'cmd', 'v', 0.6], [4.6, 'view', 'coil'], [9, 'cmd', 'v', 0], [9.1, 'view', 'gal'], [10, 'reset'], [11, 'cmd', 'v', -0.6], [14, 'view', 'hero'], [16, 'preset', 1], [16.1, 'speed', 0.25], [17, 'drop'], [26, 'preset', 2], [26.1, 'speed', 0.25], [27, 'drop'], [37, 'speed', 1], [37.1, 'view', 'coil'], [40, 'td', true], [40.1, 'view', 'side'], [48, 'td', false], [48.1, 'view', 'hero'], [50, 'preset', 0]];
 function cmd(k, v) { if (k === 'v') { model.vcmd = clamp(v, RANGE.v[0], RANGE.v[1]); } else model[k] = clamp(v, RANGE[k][0], RANGE[k][1]); if (k === 'N') model.N = Math.round(model.N / 10) * 10; model.hist = []; }
 function setMode(m) { model.mode = m; reset(model); }
-function toggle(k) { model[k] = !model[k]; reset(model); }
+function toggle(k) { model[k] = !model[k]; if (k !== 'hand') reset(model); }
 function applyPreset(i) { const p = PRESETS[i]; model.mode = p.mode; model.N = p.N; model.R = p.R; model.flip = !!p.flip; model.open = !!p.open; reset(model); model.vcmd = p.mode === 'motor' ? p.v : 0; model.rows = []; ui.setPreset(i); }
 const ui = createUI(app, {
   cmd(k, v) { userInput(); cmd(k, v); ui.setPreset(-1); }, mode(m) { userInput(); setMode(m); ui.setPreset(-1); }, stop() { userInput(); model.vcmd = 0; }, reset() { userInput(); reset(model); }, drop() { userInput(); release(model); }, toggle(k) { userInput(); toggle(k); ui.setPreset(-1); },
@@ -73,6 +73,7 @@ function labelItems(r, s, td) {
   const items = [], part = clamp((td - 0.8) / 0.2, 0, 1), at = (id, p, o) => { const q = proj(p); items.push({id, x: q.x, y: q.y, visible: q.visible, ...o}); };
   at('magnet', rig.pts.magnet, {text: 'NAM CHÂM', sub: s.flip ? 'cực N hướng LÊN' : 'cực N hướng XUỐNG', color: RD, dy: -30, dx: 90, a: 1});
   at('coil', rig.pts.coil, {text: `CUỘN DÂY · N = ${s.N} vòng`, sub: `Φ = ${f2(r.phi * 1e3, 1)} mWb · e = ${f2(r.e, 2)} V`, color: '#a86f00', dy: 40, dx: 110, a: 1});
+  if (model.hand && Math.abs(r.i) > 5e-4 && !s.open) at('hand', rig.pts.hand, {text: 'BÀN TAY PHẢI', sub: 'bốn ngón: chiều dòng cảm ứng · ngón cái: chiều B cảm ứng', color: '#b06a2a', dy: -36, dx: 100, a: 1});
   at('gal', rig.pts.gal, {text: 'ĐIỆN KẾ', sub: `i = ${f2(r.i, 3)} A · thang ±${f2(fs, fs < 0.1 ? 2 : 1)} A`, color: GR, dy: -40, dx: 20, a: 1});
   at('tube', rig.pts.tube, {text: 'ỐNG THUỶ TINH', sub: 'quấn cuộn dây quanh ống', color: INK, part: true, dy: -30, dx: -100, a: part});
   at('cushion', rig.pts.cushion, {text: 'ĐỆM XỐP', sub: 'đón nam châm rơi', color: INK, part: true, dy: 30, dx: 90, a: part});

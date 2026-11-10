@@ -13,7 +13,7 @@ export function createUI(app, hooks) {
   root.appendChild(el('<div class="chip"><b id="mode">NORMAL · NGUYÊN KHỐI</b><b id="tourchip">AUTO-TOUR</b></div>'));
   const row = (k, id, c) => `<div class="g3"><span class="k" style="white-space:nowrap;font-size:11px">${k}</span><span class="v" id="v${id}"></span><div class="bg"><i id="b${id}" style="background:${c}"></i></div></div>`;
   root.appendChild(el(`<div class="panel" id="left"><div class="ptitle"><span>SỐ LIỆU</span><span>TELEMETRY</span></div>
-    <div class="blk" style="--c:${OR}">${row('Φ (cuộn)', 'p', BL)}${row('e', 'e', OR)}${row('i', 'i', GR)}${row('v', 'v', PU)}${row('F hãm', 'F', RD)}</div>
+    <div class="blk" style="--c:${OR}">${row('Φ (cuộn)', 'p', BL)}${row('e', 'e', OR)}${row('i', 'i', GR)}${row('v (↓ +)', 'v', PU)}${row('F hãm', 'F', RD)}</div>
     <div class="res" id="tag" style="margin:0 0 6px;padding:5px 10px"></div>
     <canvas class="gr" id="g1" width="680" height="300"></canvas><canvas class="gr" id="g2" width="680" height="300"></canvas>
     <table class="tb" id="tb"></table></div>`));
@@ -22,7 +22,7 @@ export function createUI(app, hooks) {
     <div class="md" id="md"><button data-m="motor">Kéo bằng<br>motor</button><button data-m="fall">Thả<br>rơi</button></div>
     <div id="pm">${sl('v', 'v vận tốc kéo (m/s), + = xuống', RANGE.v[0], RANGE.v[1], 0.05, PU)}<div class="rw"><button class="pre" id="b-stop" style="margin:0;flex:1;text-align:center;font:700 12px Inter,sans-serif">■ Dừng</button><button class="pre" id="b-reset" style="margin:0;flex:1;text-align:center;font:700 12px Inter,sans-serif">↺ Đưa nam châm lên</button></div></div>
     <div id="pf"><div class="rw"><button class="btn big" id="b-drop" style="margin:0;height:40px;font-size:15px;flex:2;box-shadow:none">▼ THẢ nam châm</button><button class="pre" id="b-reset2" style="margin:0;flex:1;text-align:center;font:700 12px Inter,sans-serif">↺ Đặt lại</button></div></div>
-    <div class="tg"><button id="t-open">Mạch: KÍN</button><button id="t-flip">Cực N: XUỐNG</button></div>
+    <div class="tg"><button id="t-open">Mạch: KÍN</button><button id="t-flip">Cực N: XUỐNG</button></div><div class="tg"><button id="t-hand">Bàn tay phải: HIỆN</button></div>
     ${sl('N', 'N số vòng dây', RANGE.N[0], RANGE.N[1], 10, BL)}${sl('R', 'R điện trở mạch (Ω)', RANGE.R[0], RANGE.R[1], 1, TL)}${sl('Br', 'Br độ từ dư nam châm (T)', RANGE.Br[0], RANGE.Br[1], 0.01, RD)}
     <div class="rw"><button class="btn big" id="b-rec" style="margin:0;height:36px;font-size:14px;flex:2;box-shadow:none">＋ Ghi e_max</button><button class="pre" id="b-clear" style="margin:0;flex:1;text-align:center;font:700 12px Inter,sans-serif">Xoá bảng</button><select id="spd" style="flex:1;border:1px solid #b6c6d0;border-radius:4px;font:700 13px Inter"><option value="0.1">×0,1</option><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option></select></div>
     <div class="ptitle" style="margin-top:2px"><span>THÍ NGHIỆM MẪU</span><span>PRESETS</span></div>
@@ -37,7 +37,7 @@ export function createUI(app, hooks) {
   for (const k of ['v', 'N', 'R', 'Br']) $('s-' + k).addEventListener('input', (e) => hooks.cmd(k, Number(e.target.value)));
   root.querySelectorAll('#md button').forEach((b) => b.addEventListener('click', () => hooks.mode(b.dataset.m)));
   $('b-stop').addEventListener('click', () => hooks.stop()); $('b-reset').addEventListener('click', () => hooks.reset()); $('b-reset2').addEventListener('click', () => hooks.reset()); $('b-drop').addEventListener('click', () => hooks.drop());
-  $('t-open').addEventListener('click', () => hooks.toggle('open')); $('t-flip').addEventListener('click', () => hooks.toggle('flip'));
+  $('t-open').addEventListener('click', () => hooks.toggle('open')); $('t-flip').addEventListener('click', () => hooks.toggle('flip')); $('t-hand').addEventListener('click', () => hooks.toggle('hand'));
   $('b-rec').addEventListener('click', () => hooks.record()); $('b-clear').addEventListener('click', () => hooks.clear());
   root.querySelectorAll('.pre[data-i]').forEach((b) => b.addEventListener('click', () => hooks.preset(Number(b.dataset.i))));
   $('spd').addEventListener('change', (e) => hooks.speed(Number(e.target.value)));
@@ -59,9 +59,9 @@ export function createUI(app, hooks) {
     setTour(state) { const b = $('b-tour'); b.classList.toggle('on', state !== 'off'); b.innerHTML = `<i></i>AUTO-TOUR · ${state === 'run' ? 'ĐANG CHẠY' : state === 'wait' ? 'TẠM DỪNG' : 'TẮT'}`; $('tourchip').classList.toggle('on', state === 'run'); $('tourchip').textContent = state === 'run' ? 'AUTO-TOUR ●' : state === 'wait' ? 'AUTO-TOUR ⏸' : 'AUTO-TOUR ○'; },
     syncSliders(s) { $('pm').style.display = s.mode === 'motor' ? '' : 'none'; $('pf').style.display = s.mode === 'fall' ? '' : 'none'; for (const k of ['v', 'N', 'R', 'Br']) { const i = $('s-' + k), val = k === 'v' ? s.vcmd : s[k]; if (document.activeElement !== i) i.value = val; $('sv-' + k).textContent = k === 'v' ? `${f(val, 2)} m/s` : k === 'N' ? `${val} vòng` : k === 'R' ? `${val} Ω` : `${f(val, 2)} T`; } },
     update(r, s, fs) {
-      root.querySelectorAll('#md button').forEach((b) => b.classList.toggle('on', b.dataset.m === s.mode)); $('t-open').classList.toggle('on', s.open); $('t-open').textContent = s.open ? 'Mạch: HỞ (không dòng)' : 'Mạch: KÍN'; $('t-flip').classList.toggle('on', s.flip); $('t-flip').textContent = s.flip ? 'Cực N: HƯỚNG LÊN' : 'Cực N: XUỐNG';
+      root.querySelectorAll('#md button').forEach((b) => b.classList.toggle('on', b.dataset.m === s.mode)); $('t-hand').classList.toggle('on', s.hand); $('t-hand').textContent = s.hand ? 'Bàn tay phải: HIỆN' : 'Bàn tay phải: ẨN'; $('t-open').classList.toggle('on', s.open); $('t-open').textContent = s.open ? 'Mạch: HỞ (không dòng)' : 'Mạch: KÍN'; $('t-flip').classList.toggle('on', s.flip); $('t-flip').textContent = s.flip ? 'Cực N: HƯỚNG LÊN' : 'Cực N: XUỐNG';
       const set = (id, txt, bar, col) => { $('v' + id).innerHTML = txt; const b = $('b' + id); b.style.width = Math.min(100, Math.abs(bar) * 100) + '%'; if (col) b.style.background = col; };
-      set('p', `${f(r.phi * 1e3, 1)}<small>mWb</small>`, Math.abs(r.phi) / 0.06); set('e', `${f(r.e, 2)}<small>V</small>`, Math.abs(r.e) / 5); set('i', `${f(r.i, 3)}<small>A</small>`, Math.abs(r.i) / Math.max(fs, 1e-6)); set('v', `${f(r.v, 2)}<small>m/s</small>`, Math.abs(r.v) / 3.5); set('F', `${f(r.F, 2)}<small>N</small>`, Math.abs(r.F) / 3);
+      set('p', `${f(r.phi * 1e3, 1)}<small>mWb</small>`, Math.abs(r.phi) / 0.06); set('e', `${f(r.e, 2)}<small>V</small>`, Math.abs(r.e) / 5); set('i', `${f(r.i, 3)}<small>A</small>`, Math.abs(r.i) / Math.max(fs, 1e-6)); set('v', `${f(-r.v, 2)}<small>m/s ↓</small>`, Math.abs(r.v) / 3.5); set('F', `${f(r.F, 2)}<small>N</small>`, Math.abs(r.F) / 3);
       $('tag').innerHTML = r.mode === 'fall' ? (r.hit ? `Đã rơi xong: <b>t = ${f(r.tFall, 3)} s</b> · KE lúc chạm = ${f(r.KEhit, 3)} J · nhiệt toả ra trong dây Q = <b>${f(r.heat * 1e3, 1)} mJ</b>` : r.released ? `Đang rơi… t = ${f(r.tFall, 2)} s` : 'Bấm “THẢ nam châm”. Cuộn dây ở giữa ống; nam châm cách 30 cm phía trên.') : `Φ đổi dấu khi nam châm đi qua: e = −NΔΦ/Δt; e đạt cực đại <b>${f(r.emax, 2)} V</b> (từ lần đặt lại)`;
       plot($('g1'), r.hist, 'phi', 'Φ qua cuộn', BL, 'mWb', 1e3); plot($('g2'), r.hist, 'e', 'e cảm ứng', OR, 'V', 1);
       $('tb').innerHTML = `<tr><th>v (m/s)</th><th>N</th><th>R (Ω)</th><th>e_max (V)</th></tr>` + (r.rows.length ? r.rows.map((q) => `<tr><td>${f(q.v, 2)}</td><td>${q.N}</td><td>${q.R}</td><td>${f(q.emax, 2)}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#6a8190">Chưa có số liệu · bấm “＋ Ghi e_max”</td></tr>');

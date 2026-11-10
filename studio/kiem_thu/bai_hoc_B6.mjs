@@ -1,0 +1,38 @@
+import {createRequire} from 'node:module';
+const require = createRequire('/root/.claude/skills/teardown/node_modules/x.js');
+const {chromium} = require('playwright');
+const out = process.argv[2];
+const browser = await chromium.launch({executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--no-sandbox']});
+const page = await browser.newPage({viewport: {width: 1600, height: 900}});
+const errs = []; page.on('console', (m) => m.type() === 'error' && errs.push(m.text())); page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+await page.goto('file:///home/user/QLTT/teardown-out/dist/vl12-b6.html');
+await page.waitForFunction(() => window.B6 && window.B6.shown, null, {timeout: 40000});
+const txt = () => page.evaluate(() => document.querySelector('#lesson').innerText.replace(/\n+/g, ' ¦ '));
+const slide = (id, v) => page.evaluate(([id, v]) => { const s = document.querySelector('#s-' + id); s.value = v; s.dispatchEvent(new Event('input', {bubbles: true})); }, [id, v]);
+const wait = (ms = 700) => page.waitForTimeout(ms);
+const doneNow = async () => (await txt()).includes('✔');
+const waitDone = async (ms = 60000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await doneNow()) return true; await wait(400); } return false; };
+const P = await import('/home/user/QLTT/studio/sims/vl12-b6/physics.js');
+let fail = 0; const chk = (c, m) => { console.log(m, c ? 'ĐẠT ✔' : 'KHÔNG ĐẠT ✘'); if (!c) fail++; };
+const predict = async (val) => { await page.fill('#ans', val); await page.click('#chk'); await wait(300); return (await txt()).includes('Đúng rồi'); };
+const next = async () => { await page.click('#next'); await wait(500); };
+await page.click('#start'); await wait();
+const passed = () => page.waitForFunction(() => window.B6.model.s < -0.3, null, {timeout: 120000});
+await slide('v', 0.6); chk(await waitDone(120000), 'B1 kéo nam châm qua cuộn dây v = 0,6:'); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B2 chọn sai (Φ lớn nên e lớn) bị từ chối:'); await page.click('.opt.sopt[data-k="1"]'); await wait(300); chk(await waitDone(5000), 'B2 nam châm đứng yên → e = 0:'); await next();
+await page.click('.opt.sopt[data-k="1"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B3 chọn sai (xuống) bị từ chối:'); await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B3 Lenz (lên):'); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B4 lúc đi ra dòng đổi chiều:'); await next();
+for (const v of [0.5, 1.0]) { await page.click('#b-reset'); await wait(300); await slide('v', v); await passed(); await wait(300); await page.click('#b-rec'); await wait(300); }
+chk(await waitDone(), 'B5 ghi e_max tại v = 0,5 và 1,0:'); console.log('  bảng:', JSON.stringify(await page.evaluate(() => window.B6.model.rows.map((r) => [r.v, +r.emax.toFixed(3)])))); await next();
+const rows = await page.evaluate(() => window.B6.model.rows); const ratio = rows.find((r) => Math.abs(r.v - 1) < 0.06).emax / rows.find((r) => Math.abs(r.v - 0.5) < 0.06).emax; await page.fill('#ans', '1'); await page.click('#chk'); await wait(300); chk((await txt()).includes('Chưa khớp'), 'B6 nhập sai (1):'); chk(await predict(ratio.toFixed(2)), `B6 tỉ số e_max = ${ratio.toFixed(3)}:`); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B7 N gấp đôi → e gấp đôi:'); await next();
+await page.click('#b-drop'); chk(await waitDone(60000), 'B8 thả rơi mạch hở:'); const t0 = await page.evaluate(() => window.B6.readout().tFall); console.log('  t rơi hở =', t0.toFixed(4), '(lí thuyết', Math.sqrt(2 * 0.6 / 9.8).toFixed(4) + ')'); await next();
+chk(await predict('0.35'), 'B9 t = 0,35 s:'); await next();
+await page.click('#t-open'); await wait(300); await page.click('#b-drop'); chk(await waitDone(60000), 'B10 thả rơi mạch kín:'); const t1 = await page.evaluate(() => window.B6.readout().tFall); console.log('  t rơi kín =', t1.toFixed(4)); chk(t1 > t0 + 0.01, 'B10 mạch kín rơi chậm hơn mạch hở:'); await next();
+await page.click('.opt.sopt[data-k="1"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B11 chọn sai (nhỏ hơn) bị từ chối:'); await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B11 thời gian lớn hơn:'); await next();
+const Q = await page.evaluate(() => { const r = window.B6.readout(); return (r.E0 - r.KEhit) * 1e3; }); console.log('  Q = mgh − KE =', Q.toFixed(1), 'mJ; nhiệt Joule tích phân =', (await page.evaluate(() => window.B6.readout().heat * 1e3)).toFixed(1), 'mJ'); chk(await predict(Q.toFixed(0)), 'B12 Q:'); await next();
+await page.click('#b-td'); await wait(6000); chk(await waitDone(), 'B13 teardown:'); await page.screenshot({path: out + '/L6-b13.png'}); await next();
+const key = [1, 1, 1, 1, 2]; let sc = 0; for (const k of key) { await page.click(`.opt[data-k="${k}"]`); await wait(150); if ((await txt()).includes('Chính xác')) sc++; await page.click('#qnext'); await wait(250); }
+chk(sc === 5, `Trắc nghiệm ${sc}/5:`); console.log('KẾT:', (await txt()).slice(0, 100));
+console.log('lỗi console:', JSON.stringify([...errs, ...(await page.evaluate(() => window.B6.errors))]), '| mục KHÔNG ĐẠT =', fail);
+await browser.close();

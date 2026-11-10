@@ -21,7 +21,7 @@ export const PRESETS = [
   {id: 'b', vi: 'Thả rơi, mạch HỞ', note: 'không có dòng điện: rơi tự do, t = √(2h/g)', mode: 'fall', v: 0, N: 300, R: 2, open: true},
   {id: 'c', vi: 'Thả rơi, mạch KÍN', note: 'dòng cảm ứng hãm nam châm (Lenz)', mode: 'fall', v: 0, N: 300, R: 2, open: false},
 ];
-export const createModel = () => ({mode: 'motor', Br: 0.4, N: 300, R: 10, vHit: 0, open: false, flip: false, s: S_TOP, v: 0, vcmd: 0, t: 0, released: false, fell: false, tFall: 0, running: true, speed: 1, rows: [], hist: [], emax: 0, heat: 0, e: 0, i: 0, phi: 0, F: 0, tAt: 0, hit: false});
+export const createModel = () => ({hand: true, mode: 'motor', Br: 0.4, N: 300, R: 10, vHit: 0, open: false, flip: false, s: S_TOP, v: 0, vcmd: 0, t: 0, released: false, fell: false, tFall: 0, running: true, speed: 1, rows: [], hist: [], emax: 0, heat: 0, e: 0, i: 0, phi: 0, F: 0, tAt: 0, hit: false});
 /** từ thông qua cuộn (pháp tuyến hướng LÊN) – nam châm N hướng xuống (flip = N hướng lên). Φ_up = −Φ_u cho N xuống. */
 export const phiUp = (s, sPos = s.s) => -(s.flip ? -1 : 1) * s.N * flux1(s.Br, sPos);
 export const emfAt = (s) => { const d = dFlux1(s.Br, s.s) * (s.flip ? -1 : 1); return s.N * d * s.v; }; // e = −dΦ_up/dt = +N·dΦ_u/ds·v (v = ds/dt, s tăng khi nam châm đi LÊN)
@@ -32,7 +32,7 @@ export function advance(s, dt) {
   while (left > 1e-9) {
     const h = Math.min(left, 0.0005); left -= h;
     const d = dFlux1(s.Br, s.s) * (s.flip ? -1 : 1), k = s.N * d; // k = N·dΦ_u/ds (Wb/m)
-    if (s.mode === 'motor') { s.v += (s.vcmd - s.v) * (1 - Math.exp(-h / 0.04)); s.s = Math.min(COIL.tube, Math.max(-COIL.tube, s.s + s.v * h)); if (Math.abs(s.s) >= COIL.tube) s.v = 0; }
+    if (s.mode === 'motor') { s.v += (-s.vcmd - s.v) * (1 - Math.exp(-h / 0.04)); s.s = Math.min(COIL.tube, Math.max(-COIL.tube, s.s + s.v * h)); if (Math.abs(s.s) >= COIL.tube) s.v = 0; }
     else if (s.released && !s.hit) { const Rb = s.open ? Infinity : s.R, Fb = s.open ? 0 : -(k * k) * s.v / Rb; s.v += (-G + Fb / MAG.m) * h; s.s += s.v * h; s.tFall += h; if (s.s <= S_BOT) { s.s = S_BOT; s.hit = true; s.vHit = s.v; s.v = 0; } }
     else s.v = 0;
     const e = k * s.v; s.e = e; s.i = s.open ? 0 : e / s.R; s.F = s.open ? 0 : -(k * k) * s.v / s.R; if (!s.open) s.heat += e * e / s.R * h; s.emax = Math.max(s.emax, Math.abs(e)); s.t += h;

@@ -1,6 +1,7 @@
 // VL12-B6 geometry: bàn, cột đỡ + tay đòn, ống thuỷ tinh thẳng đứng có cuộn dây quấn quanh, nam châm (N hướng xuống) treo bằng dây ròng rọc / thả rơi vào đệm xốp, điện kế nối cuộn dây.
 import * as THREE from 'three';
 import {COIL, MAG, S_BOT, S_TOP} from './physics.js';
+import {createRightHand} from '../kit-su-pham/tay_phai.js';
 
 const COL = {orange: 0xe8590c, ink: 0x14303c, steel: 0x8a95a0, dark: 0x252b33, N: 0xc0392b, S: 0x2b59c3, wood: 0xcdb892, cu: 0xc77a3a};
 const mat = (c, o = {}) => new THREE.MeshStandardMaterial({color: c, metalness: 0.4, roughness: 0.5, envMapIntensity: 0.55, ...o});
@@ -49,6 +50,8 @@ export function createRig(scene) {
   const termL = add(gal, new THREE.CylinderGeometry(0.01, 0.01, 0.02, 12), mat(COL.ink), -0.05, 0.17, 0, false), termR = add(gal, new THREE.CylinderGeometry(0.01, 0.01, 0.02, 12), mat(COL.N), 0.05, 0.17, 0, false);
   const lead = (a, b, c) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([a, b, c].map((p) => new THREE.Vector3(...p)), false, 'centripetal'), 40, 0.0035, 6), mat(0x2a2f36, {metalness: 0.1, roughness: 0.7}));
   root.add(lead([0.06, YC + 0.0, 0.0], [0.2, YC - 0.1, 0.07], [GX + 0.05, TABLE + 0.18, 0])); root.add(lead([0.056, YC - 0.012, 0.0], [0.15, YC - 0.2, -0.08], [GX - 0.05, TABLE + 0.18, 0]));
+  // bàn tay phải: bốn ngón theo chiều dòng cảm ứng (ngược chiều kim đồng hồ khi nhìn từ trên nếu e > 0), ngón cái chỉ chiều B cảm ứng
+  const handG = new THREE.Group(); root.add(handG); const handObj = createRightHand(0.068, {finger: 0.0085, start: 40 * Math.PI / 180}); handG.add(handObj); pts.hand = marker(handG, handObj.userData.tip.x, handObj.userData.tip.y, handObj.userData.tip.z);
   // mũi tên B cảm ứng (bên cạnh cuộn dây)
   const aB = makeArrow(0xe8590c, 0.007); root.add(aB);
   pts.coil = marker(root, 0.058, YC, 0); pts.magnet = marker(mag, MAG.a, 0, 0); pts.gal = marker(gal, 0.1, 0.12, 0.06); pts.tube = marker(root, -TR, YC + 0.28, 0); pts.cushion = marker(root, TR, YT0 + 0.01, 0); pts.arm = marker(root, 0, yArm, 0); pts.arrowB = marker(root, 0.09, YC, 0); pts.col = marker(root, colX, YC - 0.1, 0);
@@ -60,6 +63,7 @@ export function createRig(scene) {
     const showThread = s.mode === 'motor' || (!r.released); const yTop = YC + 0.55 - 0.0; thread.visible = showThread; if (showThread) { const len = yTop - (ym + MAG.L / 2 + 0.012); thread.scale.y = Math.max(0.001, len); thread.position.set(0, ym + MAG.L / 2 + 0.012 + len / 2, 0); }
     const sgn = r.direction; dirs.forEach((c) => { const a = c.userData.a; c.visible = Math.abs(r.i) > 5e-4 && sgn !== 0; const tg = new THREE.Vector3(-Math.sin(a), 0, -Math.cos(a)).multiplyScalar(sgn || 1); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tg); });
     aB.rotation.z = r.direction >= 0 ? 0 : Math.PI; aB.position.set(0.09, YC + (r.direction >= 0 ? -0.04 : 0.04), 0); aB.userData.set(Math.min(0.1, Math.abs(r.i) / Math.max(fs, 1e-6) * 0.1) * (s.open ? 0 : 1));
+    handG.visible = !!s.hand && Math.abs(r.i) > 5e-4 && !s.open; handG.rotation.set(r.direction >= 0 ? 0 : Math.PI, 0, 0); handG.position.set(0, YC + (r.direction >= 0 ? -0.025 : 0.025), 0);
     needleP.rotation.z = -ang; root.updateMatrixWorld(true);
     if (dialM.userData.fs !== fs) { dialM.userData.fs = fs; dialM.map?.dispose(); dialM.map = dialTexture(fs); dialM.needsUpdate = true; }
   }
