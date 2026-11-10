@@ -50,19 +50,19 @@ export function createUI(app, hooks) {
     update(r, s) {
       root.querySelectorAll('#mg button').forEach((b) => b.classList.toggle('on', Number(b.dataset.m) === s.mag));
       const set = (id, txt, bar, col) => { $('v' + id).innerHTML = txt; const b = $('b' + id); b.style.width = Math.min(100, Math.abs(bar) * 100) + '%'; if (col) b.style.background = col; };
-      set('I', `${f(r.I, 2)}<small>A</small>`, Math.abs(r.I) / 3); set('m', `${f(r.disp, 2)}<small>g</small>`, Math.abs(r.disp) / 4); set('F', `${f(r.Fm, 2)}<small>mN</small>`, Math.abs(r.Fm) / 40);
+      set('I', `${f(r.I, 2)}<small>A</small>`, Math.abs(r.I) / 3); set('m', `${f(r.disp, 2)}<small>g</small>`, Math.abs(r.disp) / (r.N * r.B * r.l * 3 / 9.8 * 1000)); set('F', `${f(r.Fm, 2)}<small>mN</small>`, Math.abs(r.Fm) / (r.N * r.B * r.l * 3 * 1000));
       set('B', r.reg ? `${f(r.reg.Bexp * 1e3, 1)}<small>mT</small>` : '—', r.reg ? r.reg.Bexp / 0.2 : 0);
       const g = r.reg;
       $('tag').innerHTML = (r.note && performance.now() / 1000 - r.note.at < 4 ? `<b style="color:#c0392b">${r.note.text}</b><br>` : '') + (g ? `Hệ số góc = <b>${f(g.slope, 2)} ± ${f(g.se, 2)} mN/A</b> → B = k/(N·l) = <b>${f(g.Bexp * 1e3, 1)} ± ${f(g.dB * 1e3, 1)} mT</b>${r.reveal ? ` · B “thật” = <b style="color:#0b8f8c">${f(r.B * 1e3, 1)} mT</b>` : ''}` : 'Ghi ít nhất 3 điểm (I khác nhau) để vẽ đường thẳng và tính B.');
       $('tb').innerHTML = `<tr><th>I (A)</th><th>N</th><th>Δm (g)</th><th>F (mN)</th></tr>` + (r.rows.length ? r.rows.map((q) => `<tr><td>${f(q.I, 2)}</td><td>${q.N}</td><td>${f(q.m, 2)}</td><td>${f(q.m * P.l * 0 + q.m / 1000 * 9.8 * 1000, 2)}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#6a8190">Chưa có số liệu · bấm “＋ Ghi số liệu”</td></tr>');
       const c = $('g1'), gx = c.getContext('2d'), w = c.width, h = c.height; gx.clearRect(0, 0, w, h); const m = {l: 84, r: 16, t: 30, b: 40}; gx.font = '16px monospace'; gx.fillStyle = INK; gx.lineWidth = 1.2; gx.strokeStyle = '#e2eaef';
-      const Imax = 3, Fmax = 60, X = (x) => m.l + ((x + Imax) / (2 * Imax)) * (w - m.l - m.r), Y = (y) => h - m.b - ((y + Fmax) / (2 * Fmax)) * (h - m.t - m.b);
+      const Imax = 3, Fmax = Math.max(20, Math.ceil((r.N * r.B * r.l * 3 * 1000 * 1.05) / 20) * 20), X = (x) => m.l + ((x + Imax) / (2 * Imax)) * (w - m.l - m.r), Y = (y) => h - m.b - ((y + Fmax) / (2 * Fmax)) * (h - m.t - m.b);
       gx.textAlign = 'center'; for (let x = -3; x <= 3; x += 1) { gx.beginPath(); gx.moveTo(X(x), Y(-Fmax)); gx.lineTo(X(x), Y(Fmax)); gx.stroke(); gx.fillText(String(x).replace('-', '−'), X(x), h - 16); }
-      gx.textAlign = 'right'; for (let y = -60; y <= 60; y += 20) { gx.beginPath(); gx.moveTo(X(-Imax), Y(y)); gx.lineTo(X(Imax), Y(y)); gx.stroke(); gx.fillText(String(y).replace('-', '−'), m.l - 6, Y(y) + 5); }
+      gx.textAlign = 'right'; for (let y = -Fmax; y <= Fmax; y += Fmax / 3) { gx.beginPath(); gx.moveTo(X(-Imax), Y(y)); gx.lineTo(X(Imax), Y(y)); gx.stroke(); gx.fillText(Math.round(y).toString().replace('-', '−'), m.l - 6, Y(y) + 5); }
       gx.strokeStyle = '#7d93a0'; gx.lineWidth = 2.5; gx.beginPath(); gx.moveTo(X(-Imax), Y(0)); gx.lineTo(X(Imax), Y(0)); gx.moveTo(X(0), Y(-Fmax)); gx.lineTo(X(0), Y(Fmax)); gx.stroke();
       if (g) { gx.strokeStyle = TL; gx.lineWidth = 3; gx.beginPath(); gx.moveTo(X(-Imax), Y(g.a - Imax * g.slope)); gx.lineTo(X(Imax), Y(g.a + Imax * g.slope)); gx.stroke(); }
       if (r.reveal) { gx.strokeStyle = 'rgba(11,143,140,.5)'; gx.lineWidth = 2; gx.setLineDash([6, 6]); const k = r.N * r.B * P.l * 1000; gx.beginPath(); gx.moveTo(X(-Imax), Y(-Imax * k)); gx.lineTo(X(Imax), Y(Imax * k)); gx.stroke(); gx.setLineDash([]); }
-      gx.fillStyle = OR; gx.strokeStyle = OR; gx.lineWidth = 2; for (const q of r.rows) { const y = q.m / 1000 * 9.8 * 1000, e = (P.sigma / 1000) * 9.8 * 1000 * 1.0; gx.beginPath(); gx.moveTo(X(q.I), Y(y - e)); gx.lineTo(X(q.I), Y(y + e)); gx.stroke(); gx.beginPath(); gx.arc(X(q.I), Y(y), 6, 0, 7); gx.fill(); }
+      gx.fillStyle = OR; gx.strokeStyle = OR; gx.lineWidth = 2; for (const q of r.rows) { const y = q.m / 1000 * 9.8 * 1000, e = P.sigma * 9.8 * 2; gx.beginPath(); gx.moveTo(X(q.I), Y(y - e)); gx.lineTo(X(q.I), Y(y + e)); gx.stroke(); gx.beginPath(); gx.arc(X(q.I), Y(y), 6, 0, 7); gx.fill(); }
       gx.fillStyle = INK; gx.strokeStyle = '#fff'; gx.lineWidth = 3; gx.beginPath(); gx.arc(X(r.I), Y(r.Fm), 8, 0, 7); gx.fill(); gx.stroke();
       gx.font = '700 16px monospace'; gx.textAlign = 'left'; gx.fillText('F (mN) theo I (A) · đường xanh: hồi quy', 6, 20); gx.textAlign = 'right'; gx.fillText('I (A)', w - 6, h - 40);
     },

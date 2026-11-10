@@ -1,0 +1,5 @@
+# Phiếu B5 – Hạt điện tích trong từ trường đều (Vật lí 12, Chương 3) *(◻ thầy xác nhận bài này có thuộc chương trình/Chương 3 không)*
+**Mô hình:** hạt (electron, proton, α) được tăng tốc qua V (½mv² = |q|V, không tương đối tính), bay vào từ trường đều B (dọc trục z) với góc α; quỹ đạo = nghiệm giải tích của m·dv/dt = q·v×B; r = mv·sinα/(|q|B), T = 2πm/(|q|B), bước ốc p = v·cosα·T, q/m = 2V·sin²α/(B²r²).
+**Thực hành:** vòng đo màu cam khớp với quỹ đạo → r_đo → q/m; bảng, trung bình ± s, đồ thị r²B² theo V (hệ số góc = 2/(q/m)).
+**Giả định:** từ trường đều trong toàn bình; chân không (bỏ qua va chạm); bỏ qua bức xạ, hiệu ứng tương đối (v ≪ c: electron 300 V có v ≈ 3,4 % c); thời gian chuyển động hiển thị chậm hơn thật (chu kỳ ~ ns–µs).
+**Kiểm chứng:** 7 phép kiểm B5 (nghiệm giải tích = RK4 sai số 1e-10, bảo toàn |v|, v, r, T đúng công thức, T không phụ thuộc v, quỹ đạo tròn đường kính 2r, chiều lệch e⁻/p⁺/đảo B, bước ốc, khôi phục q/m của 3 hạt) + học sinh làm thử `bai_hoc_B5.mjs` (15 nhiệm vụ).

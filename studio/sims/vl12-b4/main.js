@@ -37,11 +37,11 @@ const cam = {az: 24, el: 18, d: 1.4, tx: 0.05, ty: TABLE + 0.14, tz: 0};
 const VIEWFN = {hero: () => [24, 20, 1.5, 0.12, TABLE + 0.14, 0], gap: () => [18, 14, 0.5, 0, YW, 0], bal: () => [-8, 14, 0.7, 0.0, TABLE + 0.05, 0.05], side: () => [90, 8, 1.4, 0, TABLE + 0.14, 0]};
 const DURATION = 56;
 const EVENTS = [[0.02, 'td', false], [0.02, 'preset', 0], [0.02, 'view', 'hero'], [0.05, 'tare'], [2, 'cmd', 'I', 1], [6, 'rec'], [7, 'cmd', 'I', 2], [11, 'rec'], [12, 'view', 'gap'], [14, 'cmd', 'I', -2], [18, 'view', 'bal'], [20, 'cmd', 'I', 2.5], [24, 'rec'], [26, 'view', 'hero'], [28, 'cmd', 'N', 5], [32, 'cmd', 'I', 0], [34, 'td', true], [34.1, 'view', 'side'], [42, 'td', false], [42.1, 'view', 'hero'], [46, 'preset', 0]];
-function cmd(k, v) { if (k === 'I') model.cmd.I = clamp(v, RANGE.I[0], RANGE.I[1]); else if (k === 'N') { model.N = clamp(Math.round(v), RANGE.N[0], RANGE.N[1]); model.rows = []; } }
+function cmd(k, v) { if (k === 'I') model.cmd.I = clamp(v, RANGE.I[0], RANGE.I[1]); else if (k === 'N') { model.N = clamp(Math.round(v), RANGE.N[0], RANGE.N[1]); } }
 function applyPreset(i) { const p = PRESETS[i]; model.mag = p.mag; model.N = p.N; model.rows = []; model.cmd.I = 0; model.I = 0; model.reveal = false; model.tared = false; model.noise = 0; tareNow(model); model.tared = false; ui.setPreset(i); }
 const ui = createUI(app, {
   cmd(k, v) { userInput(); cmd(k, v); ui.setPreset(-1); }, magnet(i) { userInput(); model.mag = i; model.rows = []; model.reveal = false; tareNow(model); model.tared = false; ui.setPreset(-1); },
-  tare() { userInput(); tareNow(model); }, record() { userInput(); if (!record(model)) model.note = {at: performance.now() / 1000, text: 'Cân chưa ổn định: chờ I và số chỉ ổn định (≈ 1 s) rồi ghi.'}; },
+  tare() { userInput(); tareNow(model); }, record() { userInput(); if (!record(model)) model.note = {at: performance.now() / 1000, text: 'Cân chưa ổn định: chờ I và số chỉ ổn định (≈ 1,5 s) rồi ghi.'}; },
   clear() { userInput(); model.rows = []; }, reveal() { userInput(); model.reveal = !model.reveal; }, preset(i) { userInput(); applyPreset(i); }, speed(v) { model.speed = v; },
   teardown() { userInput(); setTd(!tdS.on); }, tour() { if (tour.run) { tour.enabled = false; tour.run = false; } else { tour.enabled = true; startTour(); } lastInput = T; }, view(v) { userInput(); setView(v); },
 });

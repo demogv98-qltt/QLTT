@@ -32,9 +32,10 @@ export function createRig(scene) {
   const frameG = new THREE.Group(); root.add(frameG); let key = -1; const cuM = gmat(COL.cu, {metalness: 0.85, roughness: 0.3});
   function buildFrame(N) {
     frameG.clear(); const zl = P.l / 2;
-    for (let n = 0; n < N; n++) { const x = (n - (N - 1) / 2) * 0.0045; const loop = [[x, YW, -zl], [x, YW, zl], [x, YT, zl], [x, YT, -zl], [x, YW, -zl]].map((p) => new THREE.Vector3(...p));
-      for (let k = 0; k < 4; k++) { const a = loop[k], b = loop[k + 1], len = a.distanceTo(b), m = new THREE.Mesh(new THREE.CylinderGeometry(0.0013, 0.0013, len, 8), cuM); m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); frameG.add(m); }
-      add(frameG, new THREE.SphereGeometry(0.0013, 8, 6), cuM, x, YW, zl, false); }
+    for (let n = 0; n < N; n++) { const x = (n - (N - 1) / 2) * 0.0045; const loop = [[x, YT, -zl], [x, YW, -zl], [x, YW, zl], [x, YT, zl]].map((p) => new THREE.Vector3(...p));
+      for (let k = 0; k < 3; k++) { const a0 = loop[k], b0 = loop[k + 1], len = a0.distanceTo(b0), m = new THREE.Mesh(new THREE.CylinderGeometry(0.0013, 0.0013, len, 8), cuM); m.position.copy(a0).add(b0).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b0.clone().sub(a0).normalize()); frameG.add(m); }
+      add(frameG, new THREE.SphereGeometry(0.0013, 8, 6), cuM, x, YW, zl, false); add(frameG, new THREE.SphereGeometry(0.0013, 8, 6), cuM, x, YW, -zl, false);
+      if (n < N - 1) { const x2 = ((n + 1) - (N - 1) / 2) * 0.0045, a0 = new THREE.Vector3(x, YT + 0.009, zl), b0 = new THREE.Vector3(x2, YT + 0.009, -zl), len = a0.distanceTo(b0), m = new THREE.Mesh(new THREE.CylinderGeometry(0.0011, 0.0011, len, 8), cuM); m.position.copy(a0).add(b0).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b0.clone().sub(a0).normalize()); frameG.add(m); frameG.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(x, YT, zl), a0), 2, 0.0011, 6), cuM)); frameG.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(b0, new THREE.Vector3(x2, YT, -zl)), 2, 0.0011, 6), cuM)); } }
     add(frameG, new THREE.BoxGeometry(0.03 + N * 0.0045, 0.008, P.l + 0.01), mat(0xe9e2d0, {metalness: 0, roughness: 0.8}), 0, YT + 0.004, 0); // thanh nhựa giữ các vòng ở phía trên
   }
   // giá đỡ
@@ -49,8 +50,8 @@ export function createRig(scene) {
   const lead = (a, b, c, d, col) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([a, b, c, d].map((p) => new THREE.Vector3(...p)), false, 'centripetal'), 40, 0.0022, 6), mat(col, {metalness: 0.1, roughness: 0.7}));
   // dây nối: từ hai đầu khung (đỉnh) tới nguồn; vòng ngoài cùng nối cực +, vòng trong cùng nối cực −
   const leadG = new THREE.Group(); root.add(leadG);
-  function leads(N) { leadG.clear(); const x0 = -((N - 1) / 2) * 0.0045, x1 = ((N - 1) / 2) * 0.0045, zl = P.l / 2; leadG.add(lead([x0, YT, zl], [0.05, YT + 0.04, 0.1], [0.3, TABLE + 0.2, 0.08], [SX + 0.05, TABLE + 0.12, 0.01], COL.N)); leadG.add(lead([x1, YT, -zl], [0.0, YT + 0.05, -0.12], [0.3, TABLE + 0.22, -0.06], [SX - 0.05, TABLE + 0.12, 0.01], 0x2a2f36)); }
-  const aF = makeArrow(COL.orange, 0.003), aR = makeArrow(0x2c9a4b, 0.003); root.add(aF, aR);
+  function leads(N) { leadG.clear(); const x0 = -((N - 1) / 2) * 0.0045, x1 = ((N - 1) / 2) * 0.0045, zl = P.l / 2; leadG.add(lead([x0, YT, -zl], [0.0, YT + 0.05, -0.12], [0.3, TABLE + 0.22, -0.06], [SX + 0.05, TABLE + 0.12, 0.01], COL.N)); leadG.add(lead([x1, YT, zl], [0.05, YT + 0.04, 0.1], [0.3, TABLE + 0.2, 0.08], [SX - 0.05, TABLE + 0.12, 0.01], 0x2a2f36)); }
+  const aF = makeArrow(COL.orange, 0.003), aR = makeArrow(0x2c9a4b, 0.003); root.add(aF, aR); for (const a of [aF, aR]) a.traverse((o) => { if (o.material) { o.material.depthTest = false; o.renderOrder = 10; } });
   pts.mag = marker(magG, 0, PAN + 0.075, 0); pts.N = marker(magG, -0.035, PAN + 0.06, 0.025); pts.S = marker(magG, 0.035, PAN + 0.06, 0.025); pts.frame = marker(frameG, 0, YT, 0.02); pts.wire = marker(frameG, 0, YW, 0.02); pts.bal = marker(balG, 0.12, TABLE + 0.04, 0.1); pts.supply = marker(supply, 0.1, 0.09, 0.08); pts.stand = marker(root, 0, YT - 0.03, zS); pts.pan = marker(balG, -0.085, PAN, 0.04);
   function texDisp(p, text, sub) { if (p.key === text + sub) return; p.key = text + sub; const g = p.c.getContext('2d'); g.fillStyle = '#10211a'; g.fillRect(0, 0, p.c.width, p.c.height); g.fillStyle = '#7dffb0'; g.font = 'bold 58px monospace'; g.textAlign = 'right'; g.fillText(text, p.c.width - 70, 66); g.font = 'bold 30px monospace'; g.textAlign = 'left'; g.fillText(sub, p.c.width - 62, 66); p.t.needsUpdate = true; }
   function update(r, s, td) {
@@ -58,7 +59,7 @@ export function createRig(scene) {
     if (s.N !== key) { key = s.N; buildFrame(s.N); leads(s.N); }
     texDisp(disp, `${(r.disp < 0 ? '-' : '') + Math.abs(r.disp).toFixed(2)}`, 'g'); texDisp(sd, `${r.I.toFixed(2)}`, 'A');
     aF.position.set(0.0, YW + 0.004, 0.0); aF.rotation.z = r.dir >= 0 ? 0 : Math.PI; aF.userData.set(Math.min(0.1, Math.abs(r.F) * 3.5)); aF.visible = r.dir !== 0 && aF.visible;
-    aR.position.set(0.0, PAN + 0.002, -0.03); aR.rotation.z = r.dir >= 0 ? Math.PI : 0; aR.userData.set(Math.min(0.1, Math.abs(r.F) * 3.5)); aR.visible = r.dir !== 0 && aR.visible;
+    aR.position.set(0.075, PAN + (r.dir >= 0 ? 0.05 : 0.01), 0.0); aR.rotation.z = r.dir >= 0 ? Math.PI : 0; aR.userData.set(Math.min(0.04, Math.abs(r.F) * 3.5)); aR.visible = r.dir !== 0 && aR.visible;
     root.updateMatrixWorld(true);
   }
   const worldPt = (p, out = new THREE.Vector3()) => { p.updateWorldMatrix(true, false); return p.getWorldPosition(out); };
