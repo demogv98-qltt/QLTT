@@ -89,4 +89,22 @@ const integ = (f, y0, t1, n = 20000) => { let y = y0, h = t1 / n; for (let i = 0
   const s1 = {...P.createModel(), phi: 0}, comp = P.newCompass(0, -0.3); comp.B = P.totalHoriz(s1, 0, -0.3); for (let i = 0; i < 4000; i++) P.stepCompass(comp, 0.004); const mm = Math.hypot(...P.magnetHoriz(s1, 0, -0.3)), ang = Math.atan2(mm, P.BE) * 180 / Math.PI; const rd = P.readout(s1, comp); T('B1 kim la bàn cân bằng ở góc lệch Bắc = arctan(B_NC/B_TĐ)', close(Math.abs(rd.needle), ang, 0.01), `${Math.abs(rd.needle).toFixed(2)}° vs ${ang.toFixed(2)}°`);
   const r45 = P.r45(0.25), sm = {...P.createModel(), phi: 0}, b45 = Math.hypot(...P.magnetHoriz(sm, 0, -r45)); T('B1 r₄₅: B_nam châm = B_Trái Đất = 40 µT trên đường trung trực', close(b45, P.BE, 1e-6), `${(r45 * 100).toFixed(2)} cm`);
   const sF = {...P.createModel(), phi: 0}, sR = {...P.createModel(), phi: 180}; const fa = P.magnetHoriz(sF, 0.2, 0), fb = P.magnetHoriz(sR, 0.2, 0); T('B1 quay nam châm 180° → từ trường đảo chiều', close(fa[0], -fb[0], 1e-9, 1e-12) && fa[0] > 0); }
+// ---- B2: từ trường của dòng điện
+{ const P = await import(S + 'vl12-b2/physics.js'); const I = 5;
+  // (1) dây hữu hạn so với tích phân số Biot–Savart dọc theo dây (đoạn −d1..+d2)
+  let ok = true; for (const r of [0.04, 0.1, 0.3, 0.55]) { let b = 0; const n = 200000, a = -P.WIRE.d1, L = P.WIRE.d1 + P.WIRE.d2; for (let i = 0; i < n; i++) { const z = a + (i + 0.5) * L / n; b += r / Math.pow(r * r + z * z, 1.5) * (L / n); } b *= P.MU0 * I / (4 * Math.PI); ok = ok && close(b, P.wireB(I, r), 1e-6); }
+  T('B2 dây thẳng hữu hạn = tích phân số Biot–Savart dọc dây', ok);
+  T('B2 dây dài (r ≪ chiều dài): sai khác công thức μ₀I/2πr dưới 1,5 % tại r = 4–5 cm', Math.abs(P.wireB(I, 0.05) / P.wireIdeal(I, 0.05) - 1) < 0.015, `${(100 * (P.wireB(I, 0.05) / P.wireIdeal(I, 0.05) - 1)).toFixed(2)} %`);
+  T('B2 dây thẳng: B(r) ∝ 1/r (r gấp đôi ở gần dây → ÷≈2)', close(P.wireB(I, 0.05) / P.wireB(I, 0.1), 2, 0.04));
+  // (2) chiều: I hướng lên → ngược chiều kim đồng hồ khi nhìn từ trên (Đông→Bắc): tại (r,0) B hướng Bắc (−z); tại (0,−r) (phía Bắc) B hướng Tây (−x)
+  const sw = {...P.createModel(), src: 'wire', I: 5}; const e1 = P.srcHoriz(sw, 0.1, 0), n1 = P.srcHoriz(sw, 0, -0.1); T('B2 chiều nắm tay phải (dòng đi lên): ở phía Đông B hướng Bắc, ở phía Bắc B hướng Tây', e1[1] < 0 && Math.abs(e1[0]) < 1e-12 && n1[0] < 0 && Math.abs(n1[1]) < 1e-12);
+  // (3) khung dây: tâm, và B_trục = μ₀NIR²/(2(R²+u²)^{3/2})
+  const lp = {...P.createModel(), src: 'loop', N: 3, I: 5, R: 0.1}; let oka = true; for (const u of [0, 0.05, 0.2, -0.1]) oka = oka && close(P.coilField(lp, u, 0)[0], P.MU0 * 3 * 5 * 0.01 / (2 * Math.pow(0.01 + u * u, 1.5)), 1e-10); T('B2 khung dây: B trên trục = μ₀NIR²/2(R²+u²)^{3/2}, tâm = μ₀NI/2R', oka && close(P.centerB(lp), P.MU0 * 15 / 0.2, 1e-12));
+  // (4) ống dây: trung tâm so với công thức đóng ống dây hữu hạn μ₀nI·L/√(L²+4R²); dài vô hạn → μ₀nI
+  const so = {...P.createModel(), src: 'sol', N: 150, I: 2}; const nI = P.MU0 * 150 / 0.3 * 2, ex = nI * 0.3 / Math.sqrt(0.09 + 4 * 0.0004); T('B2 ống dây (hữu hạn): B giữa ống = μ₀nI·ℓ/√(ℓ²+4R²) (tổng 200 vòng mịn)', close(P.centerB(so), ex, 2e-3), `${(P.centerB(so) * 1e3).toFixed(4)} vs ${(ex * 1e3).toFixed(4)} mT`);
+  T('B2 ống dây: B ở đầu ống ≈ nửa B ở giữa (±3 %)', close(Math.abs(P.coilField(so, 0.15, 0)[0]) / P.centerB(so), 0.5, 0.03));
+  // (5) div B = 0 cho khung dây
+  let dv = 0; for (const [u, r] of [[0.05, 0.03], [0.2, 0.15], [-0.1, 0.08]]) { const h = 1e-5, f = (uu, rr) => P.coilField(lp, uu, rr); const div = (f(u + h, r)[0] - f(u - h, r)[0]) / (2 * h) + ((r + h) * f(u, r + h)[1] - (r - h) * f(u, r - h)[1]) / (2 * h * r); dv = Math.max(dv, Math.abs(div) / (Math.hypot(...f(u, r)) / r)); } T('B2 ∇·B = 0 cho khung dây', dv < 1e-5, dv.toExponential(1));
+  T('B2 đường sức khung dây: tích phân RK4 khép kín', P.traceCoil({...lp, I: 1}, 0.05).closed);
+  T('B2 đổi chiều I → B đổi chiều (khung, ống, dây)', ['wire', 'loop', 'sol'].every((src) => { const a = {...P.createModel(), src, N: src === 'sol' ? 150 : 1, I: 3}, b = {...a, I: -3}, pa = src === 'wire' ? [0.1, 0] : [0.05, 0], A = P.srcHoriz(a, ...pa), Bv = P.srcHoriz(b, ...pa); return close(A[0], -Bv[0], 1e-12, 1e-14) && close(A[1], -Bv[1], 1e-12, 1e-14); })); }
 console.log(out.join('\n')); console.log(`\nTỔNG: ${pass} đạt, ${fail} lỗi`); process.exit(fail ? 1 : 0);
