@@ -1,0 +1,37 @@
+import {createRequire} from 'node:module';
+const require = createRequire('/root/.claude/skills/teardown/node_modules/x.js');
+const {chromium} = require('playwright');
+const out = process.argv[2];
+const browser = await chromium.launch({executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--no-sandbox']});
+const page = await browser.newPage({viewport: {width: 1600, height: 900}});
+const errs = []; page.on('console', (m) => m.type() === 'error' && errs.push(m.text())); page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+await page.goto('file:///home/user/QLTT/teardown-out/dist/vl12-b3.html');
+await page.waitForFunction(() => window.B3 && window.B3.shown, null, {timeout: 40000});
+const txt = () => page.evaluate(() => document.querySelector('#lesson').innerText.replace(/\n+/g, ' ¦ '));
+const slide = (id, v) => page.evaluate(([id, v]) => { const s = document.querySelector('#s-' + id); s.value = v; s.dispatchEvent(new Event('input', {bubbles: true})); }, [id, v]);
+const wait = (ms = 700) => page.waitForTimeout(ms);
+const doneNow = async () => (await txt()).includes('✔');
+const waitDone = async (ms = 60000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await doneNow()) return true; await wait(400); } return false; };
+let fail = 0; const chk = (c, m) => { console.log(m, c ? 'ĐẠT ✔' : 'KHÔNG ĐẠT ✘'); if (!c) fail++; };
+const predict = async (val) => { await page.fill('#ans', val); await page.click('#chk'); await wait(300); return (await txt()).includes('Đúng rồi'); };
+const next = async () => { await page.click('#next'); await wait(500); };
+await page.click('#start'); await wait();
+await slide('I', 3); chk(await waitDone(), 'B1 I=3 A:'); await next();
+chk(await predict('0.12'), 'B2 F=0,12 N:'); await next();
+chk(await predict('1.5'), 'B3 Δy=1,5 cm:'); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(200); chk(!(await txt()).includes('✔'), 'B4 chọn sai (vẫn đi lên) bị từ chối:'); await page.click('.opt.sopt[data-k="1"]'); await wait(300); chk(await waitDone(5000), 'B4 chọn đúng:'); await next();
+await slide('I', -3); chk(await waitDone(), 'B5 I=−3 A:'); await next();
+await page.click('.opt.sopt[data-k="1"]'); await wait(300); chk(await waitDone(5000), 'B6 bàn tay trái:'); await next();
+for (const I of [1, 2, 3, 4, 5]) { await slide('I', I); await page.waitForFunction(() => window.B3.readout().settled, null, {timeout: 60000}); await page.click('#b-rec'); await wait(200); }
+chk(await waitDone(), 'B7 ghi 5 số liệu:'); const rows = await page.evaluate(() => window.B3.model.rows.map((r) => [r.I, +r.F.toFixed(4)])); console.log('  bảng:', JSON.stringify(rows)); chk(rows.every((r) => Math.abs(r[1] - 0.04 * r[0]) < 0.002), 'B7 F đo = 0,04·I:'); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B8 đồ thị thẳng qua gốc:'); await next();
+chk(await predict('0.2'), 'B9 B = 0,2 T:'); await next();
+await slide('B', 0.3); chk(await waitDone(), 'B10 B = 0,3 T:'); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B11 l giảm nửa:'); await next();
+await page.fill('#ans', '0.12'); await page.click('#chk'); await wait(300); chk((await txt()).includes('Chưa khớp'), 'B12 nhập sai (0,12):'); chk(await predict('0.085'), 'B12 F=0,085 N:'); await next();
+await page.click('.opt.sopt[data-k="0"]'); await wait(300); chk(await waitDone(5000), 'B13 θ=0 → F=0:'); await next();
+await page.click('#b-td'); await wait(6000); chk(await waitDone(), 'B14 teardown:'); await page.screenshot({path: out + '/L1-b14.png'}); await next();
+const key = [2, 0, 1, 1, 1]; let sc = 0; for (const k of key) { await page.click(`.opt[data-k="${k}"]`); await wait(150); if ((await txt()).includes('Chính xác')) sc++; await page.click('#qnext'); await wait(250); }
+chk(sc === 5, `Trắc nghiệm ${sc}/5:`); console.log('KẾT:', (await txt()).slice(0, 100));
+console.log('lỗi console:', JSON.stringify([...errs, ...(await page.evaluate(() => window.B3.errors))]), '| mục KHÔNG ĐẠT =', fail);
+await browser.close();

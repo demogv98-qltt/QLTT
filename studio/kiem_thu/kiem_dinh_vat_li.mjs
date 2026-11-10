@@ -64,4 +64,19 @@ const integ = (f, y0, t1, n = 20000) => { let y = y0, h = t1 / n; for (let i = 0
   const a = P.createModel(P.PRESETS[1]); T('Đòn bẩy lợi lực: preset cân bằng đúng (F₁d₁ = F₂d₂, F₁ < F₂)', close(a.F1 * a.d1, a.F2 * a.d2, 1e-9) && a.F1 < a.F2, `${a.F1 * a.d1} vs ${a.F2 * a.d2} N·m`); }
 // ---- M1: chuyển động thẳng
 { const P = await import(S + 'vl10-m1/physics.js'); let ok = true, info = ''; for (let k = 0; k < P.SCRIPTS.length; k++) { const sc = P.SCRIPTS[k]; const s = {...P.createModel(), script: k}; P.reset(s); s.running = true; let t = 0; while (t < sc.T - 1e-9) { const h = Math.min(1 / 240, sc.T - t); P.step(s, h); t += h; } const ref = P.scriptAt(k, sc.T); const good = close(s.x, ref.x, 0, 0.02) && close(s.s, ref.s, 0, 0.02); ok = ok && good; info += `[${sc.T}s: x=${s.x.toFixed(2)}/${ref.x.toFixed(2)}] `; } T('M1 tích phân x(t), quãng đường s khớp công thức từng đoạn', ok, info); }
+// ---- B3: lực từ lên dây dẫn (Vật lí 12)
+{ const P = await import(S + 'vl12-b3/physics.js'); let ok = true, ok2 = true, ok3 = true;
+  for (const [B, l, th, I] of [[0.2, 0.2, 90, 3], [0.3, 0.15, 45, -2.5], [0.1, 0.1, 35, 5], [0.25, 0.2, 60, 1.2]]) {
+    const s = {...P.createModel(), B, l, th, I}; const fv = P.forceVec(s);
+    // (1) đối chiếu: lực lên các hạt tải chuyển động Σ q·v × B, với I = n·q·A·v_d (dùng n, A, q tuỳ ý)
+    const n = 8.5e28, q = 1.602e-19, A = 1e-6, vd = I / (n * q * A), N = n * A * l, b = P.bHat(th).map((x) => x * B); const c = P.cross([0, 0, vd], b); const fq = c.map((x) => x * q * N);
+    ok = ok && fv.every((x, i) => close(x, fq[i], 1e-9, 1e-12));
+    // (2) độ lớn = B·I·l·sinθ và F ⟂ dây, F ⟂ B
+    const mag = Math.hypot(...fv); ok2 = ok2 && close(mag, Math.abs(B * I * l * Math.sin(th * Math.PI / 180)), 1e-12, 1e-12) && Math.abs(fv[2]) < 1e-12 && Math.abs(fv[0] * b[0] + fv[1] * b[1] + fv[2] * b[2]) < 1e-12;
+    // (3) cân bằng: lò xo nén/giãn đúng 2k·e = mg − F, và mô phỏng động học hội tụ tới đó
+    const t = {...s, cmd: {I}, e: 0, v: 0, t: 0, speed: 1}; for (let i = 0; i < 3000; i++) P.advance(t, 0.01); ok3 = ok3 && close(t.e, P.eqExt(t), 0, 1e-6) && close(P.readout(t).Fmeas, P.forceUp(s), 1e-3, 1e-5) && P.readout(t).settled;
+  }
+  T('B3 F⃗ = I·l⃗×B⃗ trùng Σ q·v×B của các hạt tải (4 ca, có đổi dấu I)', ok); T('B3 |F| = B·I·l·sinθ, F ⟂ dây và F ⟂ B', ok2); T('B3 cân bằng lò xo: 2k·e = mg − F, “F đo” trùng F lí thuyết', ok3);
+  const a = {...P.createModel(), B: 0.2, l: 0.2, th: 90, I: 3}, b2 = {...a, I: -3}; T('B3 đổi chiều I → F đổi chiều (cùng độ lớn)', close(P.forceUp(a), -P.forceUp(b2), 1e-12) && P.forceUp(a) > 0);
+  let maxUp = 0; for (const th of [35, 90]) for (const l of [0.1, 0.2]) for (const I of [-5, 5]) maxUp = Math.max(maxUp, Math.abs(0.3 * I * l * Math.sin(th * Math.PI / 180)) / (2 * P.P.k)); T('B3 thanh dịch tối đa < bán kính đĩa cực (không ra khỏi từ trường đều)', maxUp < 0.05, `${(maxUp * 100).toFixed(2)} cm < 5 cm`); }
 console.log(out.join('\n')); console.log(`\nTỔNG: ${pass} đạt, ${fail} lỗi`); process.exit(fail ? 1 : 0);
